@@ -1,7 +1,7 @@
 'use client';
 
 import { Calendar, ChevronDown, Flag, MoreHorizontal, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { projects as projectsApi, tasks as tasksApi, type Project } from '@/lib/api';
 import { useTranslations } from 'next-intl';
 
@@ -29,13 +29,14 @@ export default function AddTaskModal({
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const tCommon = useTranslations('dashboard.common');
 
   const priorityLabels: Record<number, string> = {
     1: 'Priority 1',
     2: 'Priority 2',
     3: 'Priority 3',
-    4: 'Priority 4 (default)',
+    4: 'Priority 4',
   };
 
   useEffect(() => {
@@ -172,17 +173,18 @@ export default function AddTaskModal({
             <div className="flex items-center gap-2">
               {/* Date */}
               <div className="relative">
+                <input
+                  ref={dateInputRef}
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="absolute opacity-0 pointer-events-none"
+                  aria-hidden="true"
+                />
                 <button
                   type="button"
                   onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'date';
-                    input.value = dueDate;
-                    input.onchange = (e) => {
-                      const target = e.target as HTMLInputElement;
-                      setDueDate(target.value);
-                    };
-                    input.click();
+                    dateInputRef.current?.showPicker?.() || dateInputRef.current?.click();
                   }}
                   className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                 >
