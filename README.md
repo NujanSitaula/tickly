@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tickly (frontend)
 
-## Getting Started
+Next.js frontend for **Tickly** (tickly.one) — tasks and projects. Uses the Laravel API in `../backend` with Laravel Passport (Bearer token). Branded as Tickly.
 
-First, run the development server:
+## Setup
+
+```bash
+npm install
+cp .env.example .env.local
+```
+
+Edit `.env.local`: set `NEXT_PUBLIC_API_URL` to your API base (e.g. `http://127.0.0.1:8000/api/v1`). Production: `https://api.tickly.one/api/v1`.
+
+## Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Sign in or register; the app sends `Authorization: Bearer <token>` to the Tickly API.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `NEXT_PUBLIC_API_URL` — API base URL (e.g. `http://127.0.0.1:8000/api/v1`)
+- `NEXT_PUBLIC_APP_NAME` — Tickly
+- `NEXT_PUBLIC_APP_DOMAIN` — tickly.one (optional, for links)
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- Login / register (Passport Bearer token stored in localStorage)
+- Projects list and create
+- Tasks list, create, toggle complete (by project)
+- Protected routes (redirect to login when not authenticated)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Start the backend (`php artisan serve` in `backend/`) before using the frontend.
