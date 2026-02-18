@@ -9,7 +9,7 @@ interface AddTaskModalProps {
   open: boolean;
   onClose: () => void;
   defaultProjectId?: number;
-  onTaskAdded?: () => void;
+  onTaskAdded?: (task?: import('@/lib/api').Task) => void;
 }
 
 export default function AddTaskModal({
@@ -81,13 +81,13 @@ export default function AddTaskModal({
 
     setLoading(true);
     try {
-      await tasksApi.create(
+      const res = await tasksApi.create(
         selectedProjectId ?? null,
         taskName.trim(),
         dueDate || undefined,
         priority
       );
-      onTaskAdded?.();
+      onTaskAdded?.(res.data);
       onClose();
     } catch (error) {
       console.error('Failed to create task:', error);

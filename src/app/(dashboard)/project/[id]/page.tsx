@@ -48,6 +48,27 @@ export default function ProjectPage() {
     loadTasks();
   }, [loadProject, loadTasks]);
 
+  // Listen for task added event from modal
+  useEffect(() => {
+    function handleTaskAdded(e: Event) {
+      const customEvent = e as CustomEvent<import('@/lib/api').Task | undefined>;
+      const newTask = customEvent.detail;
+      
+      // If we have the task data and it belongs to this project, add it optimistically
+      if (newTask && newTask.project_id === projectId) {
+        setTasks((prev) => [newTask, ...prev]);
+      } else if (newTask && newTask.project_id !== projectId) {
+        // Task was added to a different project, no need to refresh
+        return;
+      } else {
+        // Fallback to refetch if no task data
+        loadTasks();
+      }
+    }
+    window.addEventListener('taskAdded', handleTaskAdded);
+    return () => window.removeEventListener('taskAdded', handleTaskAdded);
+  }, [loadTasks, projectId]);
+
   if (!project) {
     return (
       <div className="flex h-full items-center justify-center">

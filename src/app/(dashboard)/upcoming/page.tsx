@@ -39,6 +39,28 @@ export default function UpcomingPage() {
     loadTasks();
   }, [loadTasks]);
 
+  // Listen for task added event from modal
+  useEffect(() => {
+    function handleTaskAdded(e: Event) {
+      const customEvent = e as CustomEvent<import('@/lib/api').Task | undefined>;
+      const newTask = customEvent.detail;
+      
+      // If we have the task data and it matches our filter (has future due_date), add it optimistically
+      if (newTask && newTask.due_date) {
+        const now = new Date();
+        const taskDueDate = new Date(newTask.due_date);
+        if (taskDueDate > now) {
+          setTasks((prev) => [newTask, ...prev]);
+          return;
+        }
+      }
+      // Fallback to refetch
+      loadTasks();
+    }
+    window.addEventListener('taskAdded', handleTaskAdded);
+    return () => window.removeEventListener('taskAdded', handleTaskAdded);
+  }, [loadTasks]);
+
   return (
     <div className="h-full">
       <div className="border-b border-border bg-background px-8 py-6">

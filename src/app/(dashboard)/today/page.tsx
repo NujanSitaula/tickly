@@ -39,6 +39,25 @@ export default function TodayPage() {
     loadTasks();
   }, [loadTasks]);
 
+  // Listen for task added event from modal
+  useEffect(() => {
+    function handleTaskAdded(e: Event) {
+      const customEvent = e as CustomEvent<import('@/lib/api').Task | undefined>;
+      const newTask = customEvent.detail;
+      
+      // If we have the task data and it matches our filter, add it optimistically
+      if (newTask) {
+        // Today page shows all tasks, so we can add it optimistically
+        setTasks((prev) => [newTask, ...prev]);
+      } else {
+        // Fallback to refetch if no task data
+        loadTasks();
+      }
+    }
+    window.addEventListener('taskAdded', handleTaskAdded);
+    return () => window.removeEventListener('taskAdded', handleTaskAdded);
+  }, [loadTasks]);
+
   const today = new Date();
   const todayFormatted = today.toLocaleDateString(locale, {
     weekday: 'long',

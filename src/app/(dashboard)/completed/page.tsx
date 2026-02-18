@@ -87,6 +87,16 @@ export default function CompletedPage() {
     loadTasks();
   }, [loadTasks]);
 
+  // Listen for task added event from modal (completed tasks won't appear here, but refresh anyway)
+  useEffect(() => {
+    function handleTaskAdded() {
+      // New tasks aren't completed, so just refresh to be safe
+      loadTasks();
+    }
+    window.addEventListener('taskAdded', handleTaskAdded);
+    return () => window.removeEventListener('taskAdded', handleTaskAdded);
+  }, [loadTasks]);
+
   return (
     <div className="h-full">
       <div className="border-b border-border bg-background px-8 py-6">

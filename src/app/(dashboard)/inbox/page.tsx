@@ -41,8 +41,17 @@ export default function InboxPage() {
 
   // Listen for task added event from modal
   useEffect(() => {
-    function handleTaskAdded() {
-      loadTasks();
+    function handleTaskAdded(e: Event) {
+      const customEvent = e as CustomEvent<import('@/lib/api').Task | undefined>;
+      const newTask = customEvent.detail;
+      
+      // If we have the task data and it has no project (inbox task), add it optimistically
+      if (newTask && newTask.project_id === null) {
+        setTasks((prev) => [newTask, ...prev]);
+      } else {
+        // Fallback to refetch if no task data or task has a project
+        loadTasks();
+      }
     }
     window.addEventListener('taskAdded', handleTaskAdded);
     return () => window.removeEventListener('taskAdded', handleTaskAdded);

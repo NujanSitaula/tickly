@@ -97,10 +97,10 @@ export default function DashboardLayout({
       <AddTaskModal
         open={addTaskOpen}
         onClose={() => setAddTaskOpen(false)}
-        onTaskAdded={() => {
+        onTaskAdded={(task) => {
           loadProjects();
-          // Notify children to refresh (could use context or event, but simple reload works)
-          window.dispatchEvent(new CustomEvent('taskAdded'));
+          // Notify children to refresh with the created task data
+          window.dispatchEvent(new CustomEvent('taskAdded', { detail: task }));
         }}
       />
     </div>
