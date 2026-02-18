@@ -28,6 +28,10 @@ export default {
     mobileAppDescription: '随时随地访问您的任务。我们的移动应用即将推出，让您在路上也能保持高效。',
     mobileApp: '移动应用',
     comingSoon: '即将推出',
+    reactivateMessage: '此账户此前已被删除。是否要重新激活？',
+    reactivateConfirm: '重新激活',
+    reactivateCancel: '取消',
+    reactivateSessionExpired: '重新激活已过期。请再次使用 Google 登录。',
   },
   common: {
     language: '语言',

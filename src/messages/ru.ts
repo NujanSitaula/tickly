@@ -28,6 +28,10 @@ export default {
     mobileAppDescription: 'Доступ к вашим задачам в любое время и в любом месте. Наше мобильное приложение скоро появится, чтобы вы могли оставаться продуктивными в пути.',
     mobileApp: 'Мобильное приложение',
     comingSoon: 'Скоро',
+    reactivateMessage: 'Этот аккаунт был удалён. Хотите восстановить его?',
+    reactivateConfirm: 'Восстановить',
+    reactivateCancel: 'Отмена',
+    reactivateSessionExpired: 'Срок действия восстановления истёк. Войдите снова через Google.',
   },
   common: {
     language: 'Язык',

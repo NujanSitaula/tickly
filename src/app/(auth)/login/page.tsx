@@ -5,14 +5,23 @@ import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
+function decodeEmailParam(encoded: string | null): string {
+  if (!encoded) return '';
+  try {
+    return atob(decodeURIComponent(encoded));
+  } catch {
+    return encoded;
+  }
+}
+
 export default function LoginPage() {
   const t = useTranslations('auth');
-  const { login } = useAuth();
+  const { login, reactivateAccount } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -20,6 +29,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(searchParams.get('error') || '');
   const [loading, setLoading] = useState(false);
+
+  const reactivateEmail = useMemo(() => {
+    if (searchParams.get('reactivate') !== '1') return null;
+    return decodeEmailParam(searchParams.get('email'));
+  }, [searchParams]);
+  const [showReactivate, setShowReactivate] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
+
+  useEffect(() => {
+    if (reactivateEmail) setShowReactivate(true);
+  }, [reactivateEmail]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +58,77 @@ export default function LoginPage() {
 
   function handleGoogleLogin() {
     window.location.href = `${API_URL}/auth/google`;
+  }
+
+  async function handleReactivateConfirm() {
+    if (!reactivateEmail) return;
+    setError('');
+    setReactivating(true);
+    try {
+      await reactivateAccount(reactivateEmail);
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('reactivateSessionExpired'));
+    } finally {
+      setReactivating(false);
+    }
+  }
+
+  function handleReactivateCancel() {
+    setShowReactivate(false);
+    router.replace('/login');
+  }
+
+  if (showReactivate && reactivateEmail) {
+    return (
+      <div className="w-full space-y-8">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <span className="text-xl font-semibold text-foreground">Tickly</span>
+          </Link>
+          <LanguageSwitcher placement="bottom" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">{t('welcomeBack')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('signInToContinue')}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 p-6 space-y-4">
+          <p className="text-sm text-foreground">{t('reactivateMessage')}</p>
+          {error && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleReactivateCancel}
+              className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              {t('reactivateCancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleReactivateConfirm}
+              disabled={reactivating}
+              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {reactivating ? t('signingIn') : t('reactivateConfirm')}
+            </button>
+          </div>
+        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          {t('dontHaveAccount')}{' '}
+          <Link href="/register" className="font-medium text-primary hover:underline">{t('signUp')}</Link>
+        </p>
+      </div>
+    );
   }
 
   return (

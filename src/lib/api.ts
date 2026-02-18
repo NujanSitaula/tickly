@@ -69,7 +69,10 @@ export async function api<T>(
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error((data as { message?: string }).message ?? res.statusText ?? 'Request failed');
+    const err = new Error((data as { message?: string }).message ?? res.statusText ?? 'Request failed') as Error & { status?: number; data?: unknown };
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
   return data as T;
 }
@@ -91,6 +94,11 @@ export const auth = {
     api<{ message: string }>('/user/delete-account', {
       method: 'POST',
       body: JSON.stringify({ reason }),
+    }),
+  reactivateAccount: (body: { email: string; password?: string; name?: string }) =>
+    api<{ user: User; access_token: string; token_type: string }>('/reactivate-account', {
+      method: 'POST',
+      body: JSON.stringify(body),
     }),
 };
 

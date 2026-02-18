@@ -10,9 +10,14 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
+function isReactivateError(err: unknown): err is Error & { status?: number; data?: { code?: string } } {
+  const e = err as Error & { status?: number; data?: { code?: string } };
+  return e?.status === 409 && e?.data?.code === 'reactivate_available';
+}
+
 export default function RegisterPage() {
   const t = useTranslations('auth');
-  const { register } = useAuth();
+  const { register, reactivateAccount } = useAuth();
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -22,6 +27,8 @@ export default function RegisterPage() {
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showReactivate, setShowReactivate] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,14 +43,87 @@ export default function RegisterPage() {
       router.push('/');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('registrationFailed'));
+      if (isReactivateError(err)) {
+        setShowReactivate(true);
+      } else {
+        setError(err instanceof Error ? err.message : t('registrationFailed'));
+      }
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleReactivateConfirm() {
+    setError('');
+    setReactivating(true);
+    try {
+      await reactivateAccount(email, password, name);
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('registrationFailed'));
+    } finally {
+      setReactivating(false);
+    }
+  }
+
+  function handleReactivateCancel() {
+    setShowReactivate(false);
+  }
+
   function handleGoogleLogin() {
     window.location.href = `${API_URL}/auth/google`;
+  }
+
+  if (showReactivate) {
+    return (
+      <div className="w-full space-y-8">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <span className="text-xl font-semibold text-foreground">Tickly</span>
+          </Link>
+          <LanguageSwitcher placement="bottom" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">{t('createAccount')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('getStarted')}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 p-6 space-y-4">
+          <p className="text-sm text-foreground">{t('reactivateMessage')}</p>
+          {error && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleReactivateCancel}
+              className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              {t('reactivateCancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleReactivateConfirm}
+              disabled={reactivating}
+              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {reactivating ? t('creatingAccount') : t('reactivateConfirm')}
+            </button>
+          </div>
+        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          {t('alreadyHaveAccount')}{' '}
+          <Link href="/login" className="font-medium text-primary hover:underline">{t('signIn')}</Link>
+        </p>
+      </div>
+    );
   }
 
   return (

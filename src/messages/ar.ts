@@ -28,6 +28,10 @@ export default {
     mobileAppDescription: 'الوصول إلى مهامك في أي مكان وفي أي وقت. تطبيقنا المحمول قادم قريباً، حتى تتمكن من البقاء منتجاً أثناء التنقل.',
     mobileApp: 'التطبيق المحمول',
     comingSoon: 'قريباً',
+    reactivateMessage: 'تم حذف هذا الحساب سابقاً. هل تريد إعادة تفعيله؟',
+    reactivateConfirm: 'إعادة التفعيل',
+    reactivateCancel: 'إلغاء',
+    reactivateSessionExpired: 'انتهت صلاحية إعادة التفعيل. يرجى تسجيل الدخول عبر Google مرة أخرى.',
   },
   common: {
     language: 'اللغة',

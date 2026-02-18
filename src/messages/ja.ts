@@ -28,6 +28,10 @@ export default {
     mobileAppDescription: 'いつでもどこでもタスクにアクセスできます。モバイルアプリは間もなくリリースされますので、外出先でも生産性を保てます。',
     mobileApp: 'モバイルアプリ',
     comingSoon: '近日公開',
+    reactivateMessage: 'このアカウントは以前に削除されました。再開しますか？',
+    reactivateConfirm: '再開する',
+    reactivateCancel: 'キャンセル',
+    reactivateSessionExpired: '再開の有効期限が切れました。Googleでもう一度サインインしてください。',
   },
   common: {
     language: '言語',

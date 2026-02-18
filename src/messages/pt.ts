@@ -28,6 +28,10 @@ export default {
     mobileAppDescription: 'Acesse suas tarefas em qualquer lugar, a qualquer momento. Nosso aplicativo móvel chegará em breve, para que você possa se manter produtivo em movimento.',
     mobileApp: 'Aplicativo móvel',
     comingSoon: 'Em breve',
+    reactivateMessage: 'Esta conta foi excluída anteriormente. Deseja reativá-la?',
+    reactivateConfirm: 'Reativar',
+    reactivateCancel: 'Cancelar',
+    reactivateSessionExpired: 'Sessão de reativação expirada. Faça login com o Google novamente.',
   },
   common: {
     language: 'Idioma',

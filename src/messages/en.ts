@@ -28,6 +28,10 @@ export default {
     mobileAppDescription: 'Access your tasks anywhere, anytime. Our mobile app is coming soon, so you can stay productive on the go.',
     mobileApp: 'Mobile App',
     comingSoon: 'Coming soon',
+    reactivateMessage: 'This account was previously deleted. Do you want to reactivate it?',
+    reactivateConfirm: 'Reactivate',
+    reactivateCancel: 'Cancel',
+    reactivateSessionExpired: 'Reactivate session expired. Please sign in with Google again.',
   },
   common: {
     language: 'Language',

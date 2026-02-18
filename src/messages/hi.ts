@@ -28,6 +28,10 @@ export default {
     mobileAppDescription: 'कहीं भी, कभी भी अपने कार्यों तक पहुंचें। हमारा मोबाइल ऐप जल्द ही आ रहा है, ताकि आप चलते-फिरते भी उत्पादक बने रह सकें।',
     mobileApp: 'मोबाइल ऐप',
     comingSoon: 'जल्द ही',
+    reactivateMessage: 'यह खाता पहले हटाया गया था। क्या आप इसे फिर से सक्रिय करना चाहते हैं?',
+    reactivateConfirm: 'फिर से सक्रिय करें',
+    reactivateCancel: 'रद्द करें',
+    reactivateSessionExpired: 'पुनः सक्रियण समाप्त। कृपया Google से फिर से साइन इन करें।',
   },
   common: {
     language: 'भाषा',
