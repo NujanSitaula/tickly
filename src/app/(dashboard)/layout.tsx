@@ -5,8 +5,10 @@ import { projects as projectsApi, type Project } from '@/lib/api';
 import { websocket } from '@/lib/websocket';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Menu, Plus } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import AddTaskModal from '@/components/AddTaskModal';
+import { useIsLg } from '@/hooks/useMediaQuery';
 
 export default function DashboardLayout({
   children,
@@ -17,7 +19,9 @@ export default function DashboardLayout({
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const isLg = useIsLg();
 
   useEffect(() => {
     if (loading) return;
@@ -86,14 +90,37 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {!isLg && (
+        <header className="fixed top-0 left-0 right-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <span className="text-lg font-semibold text-foreground">Tickly</span>
+          <button
+            type="button"
+            onClick={() => setAddTaskOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Add task"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </header>
+      )}
       <Sidebar
         projects={projects}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         onProjectsChange={loadProjects}
         onOpenAddTask={() => setAddTaskOpen(true)}
+        mobileOpen={sidebarOpen}
+        onMobileClose={() => setSidebarOpen(false)}
       />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">{children}</main>
       <AddTaskModal
         open={addTaskOpen}
         onClose={() => setAddTaskOpen(false)}

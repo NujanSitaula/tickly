@@ -15,10 +15,12 @@ import {
   MoreHorizontal,
   Plus,
   Search,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useIsLg } from '@/hooks/useMediaQuery';
 import LanguageSwitcher from './LanguageSwitcher';
 import AddProjectModal from './AddProjectModal';
 import { useTranslations } from 'next-intl';
@@ -29,12 +31,25 @@ interface SidebarProps {
   onToggle: () => void;
   onProjectsChange: () => void;
   onOpenAddTask: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export default function Sidebar({ projects, collapsed, onToggle, onProjectsChange, onOpenAddTask }: SidebarProps) {
+export default function Sidebar({ projects, collapsed, onToggle, onProjectsChange, onOpenAddTask, mobileOpen = false, onMobileClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const isLg = useIsLg();
+  const effectiveExpanded = !collapsed || !isLg;
+  const onMobileCloseRef = useRef(onMobileClose);
+  onMobileCloseRef.current = onMobileClose;
+
+  // Close drawer only when route changes (mobile/tablet), not on every render
+  useEffect(() => {
+    if (!isLg) {
+      onMobileCloseRef.current?.();
+    }
+  }, [pathname, isLg]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [projectMenuOpenId, setProjectMenuOpenId] = useState<number | null>(null);
@@ -90,18 +105,24 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
     return a.name.localeCompare(b.name);
   });
 
-  return (
-    <aside
-      className={`flex h-screen flex-col border-r border-border bg-muted/30 shrink-0 transition-[width] duration-200 ease-out ${
-        collapsed ? 'w-16' : 'w-64'
-      }`}
-    >
+  const asideContent = (
+    <>
       {/* Header */}
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-3 shrink-0">
+        {!isLg && onMobileClose && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
         <Link
           href="/"
           className={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden transition-[width,opacity] duration-200 ease-out ${
-            collapsed ? 'w-0 flex-none opacity-0' : 'opacity-100'
+            !effectiveExpanded ? 'w-0 flex-none opacity-0' : 'opacity-100'
           }`}
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -116,18 +137,20 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
           </div>
           <span className="truncate text-lg font-semibold text-foreground">Tickly</span>
         </Link>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
+        {isLg && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* User Profile */}
@@ -136,7 +159,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary font-medium text-sm">
             {user?.name ? getInitials(user.name) : 'U'}
           </div>
-          {!collapsed && (
+          {effectiveExpanded && (
             <div className="relative flex-1">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -184,18 +207,18 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
       </div>
 
       {/* Add Task Button */}
-      <div className={`flex border-b border-border shrink-0 ${collapsed ? 'justify-center px-3 py-3' : 'p-4'}`}>
+      <div className={`flex border-b border-border shrink-0 ${effectiveExpanded ? 'p-4' : 'justify-center px-3 py-3'}`}>
         <button
           onClick={onOpenAddTask}
           className={`flex h-10 items-center justify-center rounded-lg bg-primary py-2.5 text-primary-foreground transition-[width,padding] duration-200 ease-out hover:bg-primary/90 shrink-0 ${
-            collapsed ? 'w-10 gap-0 px-0' : 'w-full gap-2 px-4'
+            effectiveExpanded ? 'w-full gap-2 px-4' : 'w-10 gap-0 px-0'
           }`}
-          title={collapsed ? tCommon('addTask') : undefined}
+          title={!effectiveExpanded ? tCommon('addTask') : undefined}
         >
           <Plus className="h-5 w-5 shrink-0" />
           <span
             className={`overflow-hidden whitespace-nowrap text-sm font-medium transition-[opacity] duration-150 ease-out ${
-              collapsed ? 'w-0 min-w-0 opacity-0' : 'opacity-100'
+              effectiveExpanded ? 'opacity-100' : 'w-0 min-w-0 opacity-0'
             }`}
           >
             {tCommon('addTask')}
@@ -218,10 +241,10 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
-                title={collapsed ? item.label : undefined}
+                title={!effectiveExpanded ? item.label : undefined}
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
-                {!collapsed && (
+                {effectiveExpanded && (
                   <>
                     <span className="flex-1">{item.label}</span>
                     {item.count !== undefined && item.count > 0 && (
@@ -235,7 +258,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
         </div>
 
         {/* Projects Section */}
-        {!collapsed && (
+        {effectiveExpanded && (
           <div className="mt-6 group/header">
             <div className="mb-2 flex items-center justify-between gap-1 px-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -357,7 +380,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
 
       {/* Footer */}
       <div className="border-t border-border p-4">
-        {collapsed ? (
+        {!effectiveExpanded ? (
           <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
             <HelpCircle className="h-5 w-5" />
           </button>
@@ -377,8 +400,8 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
 
       {/* Delete Project Confirmation Modal */}
       {projectToDelete && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-lg">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[min(90vh,calc(100dvh-8rem))] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-lg">
             <h2 className="text-lg font-semibold text-foreground mb-2">Delete project</h2>
             <p className="text-sm text-muted-foreground mb-4">
               To confirm, type the project name exactly:
@@ -430,8 +453,8 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
 
       {/* Edit Project Modal */}
       {editingProject && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-lg">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[min(90vh,calc(100dvh-8rem))] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-lg">
             <h2 className="text-lg font-semibold text-foreground mb-2">Edit project</h2>
             <div className="space-y-4">
               <div>
@@ -536,8 +559,8 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
 
       {/* Delete Account Modal */}
       {showDeleteAccount && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-lg">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[min(90vh,calc(100dvh-8rem))] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-lg">
             <h2 className="text-lg font-semibold text-foreground mb-2">{tCommon('deleteAccountTitle')}</h2>
             <p className="text-sm text-muted-foreground mb-4">
               {tCommon('deleteAccountIntro')}
@@ -685,6 +708,22 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
           </div>
         </div>
       )}
-    </aside>
+    </>
+  );
+  return (
+    <>
+      {!isLg && mobileOpen && onMobileClose && (
+        <div className="fixed inset-0 z-20 bg-black/50" onClick={onMobileClose} aria-hidden />
+      )}
+      <aside
+        className={
+          isLg
+            ? `flex h-screen flex-col border-r border-border bg-muted/30 shrink-0 transition-[width] duration-200 ease-out ${collapsed ? 'w-16' : 'w-64'}`
+            : `fixed inset-y-0 left-0 z-30 flex h-screen w-64 flex-col border-r border-border bg-background shadow-xl transition-transform duration-200 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
+        }
+      >
+        {asideContent}
+      </aside>
+    </>
   );
 }

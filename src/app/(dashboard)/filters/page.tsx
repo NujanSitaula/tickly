@@ -9,14 +9,14 @@ export default function FiltersPage() {
 
   return (
     <div className="h-full">
-      <div className="border-b border-border bg-background px-8 py-6">
+      <div className="border-b border-border bg-background px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <div className="flex items-center gap-3">
           <Filter className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-semibold text-foreground">{tDashboard('filters.title')}</h1>
         </div>
       </div>
 
-      <div className="flex h-[calc(100%-80px)] items-center justify-center px-8 py-10">
+      <div className="flex h-[calc(100%-80px)] items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-10">
         <div className="max-w-md text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Filter className="h-6 w-6" />

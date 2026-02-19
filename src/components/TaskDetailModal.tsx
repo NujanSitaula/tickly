@@ -301,14 +301,14 @@ export default function TaskDetailModal({
         }`}
       >
         <div
-          className={`w-full max-w-4xl rounded-xl border border-border bg-background shadow-lg transition-transform duration-200 ease-out ${
+          className={`flex max-h-[min(90vh,calc(100dvh-8rem))] w-full max-w-4xl flex-col rounded-xl border border-border bg-background shadow-lg transition-transform duration-200 ease-out ${
             visible ? 'translate-y-0 scale-100' : 'translate-y-2 scale-[0.98]'
           }`}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={handleKeyDown}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
             <div className="flex items-center gap-2">
               <Briefcase className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{projectName}</span>
@@ -323,11 +323,11 @@ export default function TaskDetailModal({
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center p-12">
+            <div className="flex flex-1 items-center justify-center p-12">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
             </div>
           ) : (
-            <div className="flex">
+            <div className="flex min-h-0 flex-1 overflow-y-auto">
               {/* Left Panel - Main Content */}
               <div className="flex-1 p-6 space-y-6">
                 {/* Title */}

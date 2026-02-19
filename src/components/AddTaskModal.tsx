@@ -125,14 +125,14 @@ export default function AddTaskModal({
         }`}
       >
         <div
-          className={`w-full max-w-lg rounded-xl border border-border bg-background shadow-lg transition-transform duration-200 ease-out ${
+          className={`flex max-h-[min(90vh,calc(100dvh-8rem))] w-full max-w-lg flex-col rounded-xl border border-border bg-background shadow-lg transition-transform duration-200 ease-out ${
             visible ? 'translate-y-0 scale-100' : 'translate-y-2 scale-[0.98]'
           }`}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={handleKeyDown}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
             <h2 className="text-lg font-semibold text-foreground">{tCommon('addTask')}</h2>
             <button
               onClick={onClose}
@@ -144,7 +144,7 @@ export default function AddTaskModal({
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
             {/* Task Name */}
             <div>
               <input

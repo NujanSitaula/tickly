@@ -2,6 +2,7 @@
 
 import { Calendar, ChevronDown, LayoutGrid, List, X } from 'lucide-react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { projects as projectsApi, userPreferences } from '@/lib/api';
 import type { ViewMode } from '@/hooks/useViewPreference';
 import { useTranslations } from 'next-intl';
@@ -83,13 +84,13 @@ export default function AddProjectModal({
 
   const selectedColorPreset = COLOR_PRESETS.find((p) => p.hex === color) ?? COLOR_PRESETS[0];
 
-  return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40" onClick={onClose}>
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-xl border border-border bg-background shadow-lg"
+        className="flex max-h-[min(90vh,calc(100dvh-8rem))] w-full max-w-md flex-col rounded-xl border border-border bg-background shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-lg font-semibold text-foreground">Add project</h2>
           <button
             type="button"
@@ -101,7 +102,7 @@ export default function AddProjectModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-sm font-medium text-foreground">Name</label>
@@ -258,4 +259,7 @@ export default function AddProjectModal({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
 }

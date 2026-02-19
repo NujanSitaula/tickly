@@ -99,8 +99,8 @@ export default function CompletedPage() {
 
   return (
     <div className="h-full">
-      <div className="border-b border-border bg-background px-8 py-6">
-        <div className="flex items-center justify-between">
+      <div className="border-b border-border bg-background px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="h-6 w-6 text-primary" />
             <div className="flex items-center gap-3">
@@ -138,7 +138,7 @@ export default function CompletedPage() {
         </div>
       </div>
 
-      <div className="px-8 py-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         {loading && tasks.length === 0 ? (
           <div className="py-12 text-center">
             <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>

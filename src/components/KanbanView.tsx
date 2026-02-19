@@ -398,7 +398,7 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
           {STATUSES.map((status) => {
             const statusTasks = columns[status.value];
             return (
-              <div key={status.value} className="flex-shrink-0 w-80">
+              <div key={status.value} className="min-w-[280px] w-80 flex-shrink-0">
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-foreground">
                     {status.label} ({statusTasks.length})
