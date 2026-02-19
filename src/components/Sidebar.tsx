@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import LanguageSwitcher from './LanguageSwitcher';
+import AddProjectModal from './AddProjectModal';
 import { useTranslations } from 'next-intl';
 
 interface SidebarProps {
@@ -35,9 +36,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
   const router = useRouter();
   const pathname = usePathname();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showAddProject, setShowAddProject] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [addingProject, setAddingProject] = useState(false);
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [projectMenuOpenId, setProjectMenuOpenId] = useState<number | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
@@ -80,23 +79,6 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
     await logout();
     router.replace('/login');
   };
-
-  async function handleAddProject(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newProjectName.trim()) return;
-    setAddingProject(true);
-    try {
-      const res = await projectsApi.create(newProjectName.trim());
-      setNewProjectName('');
-      setShowAddProject(false);
-      onProjectsChange();
-      router.push(`/project/${res.data.id}`);
-    } catch (error) {
-      console.error('Failed to add project:', error);
-    } finally {
-      setAddingProject(false);
-    }
-  }
 
   const sortedProjects = [...projects].sort((a, b) => {
     const pa = a.priority ?? 4;
@@ -254,18 +236,27 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
 
         {/* Projects Section */}
         {!collapsed && (
-          <div className="mt-6">
-            <div className="mb-2 flex items-center justify-between px-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {tSidebar('myProjects')}
-            </h3>
-              <span className="text-xs text-muted-foreground">
+          <div className="mt-6 group/header">
+            <div className="mb-2 flex items-center justify-between gap-1 px-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {tSidebar('myProjects')}
+              </h3>
+              <span className="text-xs text-muted-foreground shrink-0">
                 {projects.length}/∞
               </span>
+              <button
+                type="button"
+                onClick={() => setShowAddProjectModal(true)}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors opacity-100"
+                aria-label="Add project"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
             </div>
             <div className="space-y-1">
               {sortedProjects.map((project) => {
                 const isActive = pathname === `/project/${project.id}`;
+                const taskCount = project.tasks_count ?? 0;
                 return (
                   <div key={project.id} className="relative group/project">
                     <Link
@@ -282,29 +273,31 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                           backgroundColor: project.color || '#94a3b8',
                         }}
                       />
-                      <span className="flex-1 truncate flex items-center gap-1">
+                      <span className="flex-1 min-w-0 truncate flex items-center gap-1">
                         {project.icon && (
-                          <span className="inline-flex h-4 w-4 items-center justify-center text-xs leading-none" aria-hidden="true">
+                          <span className="inline-flex h-4 w-4 items-center justify-center text-xs leading-none shrink-0" aria-hidden="true">
                             {project.icon}
                           </span>
                         )}
                         <span className="truncate">{project.name}</span>
                       </span>
-                      {project.tasks_count !== undefined && project.tasks_count > 0 && (
-                        <span className="text-xs text-muted-foreground">{project.tasks_count}</span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setProjectMenuOpenId(projectMenuOpenId === project.id ? null : project.id);
-                        }}
-                        className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors opacity-0 group-hover/project:opacity-100 pointer-events-none group-hover/project:pointer-events-auto"
-                        aria-label="Project options"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
+                      <span className="relative flex h-7 w-7 shrink-0 items-center justify-center">
+                        <span className="text-xs text-muted-foreground tabular-nums transition-opacity group-hover/project:opacity-0">
+                          {taskCount}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setProjectMenuOpenId(projectMenuOpenId === project.id ? null : project.id);
+                          }}
+                          className="absolute inset-0 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-opacity opacity-0 group-hover/project:opacity-100 pointer-events-none group-hover/project:pointer-events-auto"
+                          aria-label="Project options"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </span>
                     </Link>
                     {projectMenuOpenId === project.id && (
                       <>
@@ -348,33 +341,18 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                   </div>
                 );
               })}
-              {showAddProject ? (
-                <form onSubmit={handleAddProject} className="px-3 py-2">
-                  <input
-                    type="text"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    onBlur={() => {
-                      if (!newProjectName.trim()) {
-                        setShowAddProject(false);
-                      }
-                    }}
-                    autoFocus
-                    placeholder="Project name"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-0"
-                  />
-                </form>
-              ) : (
-                <button
-                  onClick={() => setShowAddProject(true)}
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                >
-                  + Add project
-                </button>
-              )}
             </div>
           </div>
         )}
+
+      {showAddProjectModal && (
+        <AddProjectModal
+          open={showAddProjectModal}
+          onClose={() => setShowAddProjectModal(false)}
+          onSuccess={onProjectsChange}
+          onNavigateToProject={(id) => router.push(`/project/${id}`)}
+        />
+      )}
       </nav>
 
       {/* Footer */}
