@@ -10,6 +10,7 @@ export type User = {
   tier?: string;
   avatar_url?: string | null;
   mode?: 'basic' | 'advanced';
+  locked_folder_has_passcode?: boolean;
 };
 export type Project = {
   id: number;

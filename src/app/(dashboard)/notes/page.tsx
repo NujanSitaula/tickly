@@ -8,7 +8,9 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
+import { auth as authApi } from '@/lib/api';
 import UnlockFolderModal from '@/components/UnlockFolderModal';
+import LockFolderModal from '@/components/LockFolderModal';
 import { isLockedFolderUnlocked } from '@/utils/lockedFolder';
 import ToastContainer, { type Toast } from '@/components/Toast';
 import {
@@ -162,14 +164,14 @@ export default function NotesListPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<NotesTab>('all');
-  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [lockedFolderModal, setLockedFolderModal] = useState<'set' | 'unlock' | null>(null);
   const [isDraggingNote, setIsDraggingNote] = useState(false);
   const [justDroppedOnId, setJustDroppedOnId] = useState<string | null>(null);
   const justDroppedOnRef = useRef<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const router = useRouter();
   const t = useTranslations('dashboard.notes');
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -361,7 +363,8 @@ export default function NotesListPage() {
     // doesn't automatically switch views.
     if (isDraggingNote) return;
     if (tab === 'locked' && !isLockedFolderUnlocked()) {
-      setShowUnlockModal(true);
+      // First time: set passcode; already set: enter passcode to unlock
+      setLockedFolderModal(user?.locked_folder_has_passcode ? 'unlock' : 'set');
       // Don't change tab until folder is unlocked
       return;
     }
@@ -513,12 +516,23 @@ export default function NotesListPage() {
       </div>
 
       <UnlockFolderModal
-        open={showUnlockModal}
-        onClose={() => setShowUnlockModal(false)}
+        open={lockedFolderModal === 'unlock'}
+        onClose={() => setLockedFolderModal(null)}
         onSuccess={() => {
-          setShowUnlockModal(false);
-          // Switch to locked tab after successful unlock
+          setLockedFolderModal(null);
           setActiveTab('locked');
+        }}
+      />
+
+      <LockFolderModal
+        open={lockedFolderModal === 'set'}
+        onClose={() => {
+          setLockedFolderModal(null);
+          setActiveTab('locked');
+        }}
+        onSuccess={async () => {
+          const res = await authApi.user();
+          setUser(res.user);
         }}
       />
 

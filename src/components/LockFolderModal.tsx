@@ -9,9 +9,10 @@ import { useCallback, useEffect, useState } from 'react';
 interface LockFolderModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function LockFolderModal({ open, onClose }: LockFolderModalProps) {
+export default function LockFolderModal({ open, onClose, onSuccess }: LockFolderModalProps) {
   const [passcode, setPasscode] = useState('');
   const [confirmPasscode, setConfirmPasscode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export default function LockFolderModal({ open, onClose }: LockFolderModalProps)
         setLoading(true);
         const res = await lockedFolder.lock(passcode);
         setLockedFolderUnlocked(res.unlock_token);
+        onSuccess?.();
         onClose();
       } catch (err: unknown) {
         const error = err as Error & { status?: number; data?: { message?: string } };
@@ -53,7 +55,7 @@ export default function LockFolderModal({ open, onClose }: LockFolderModalProps)
         setLoading(false);
       }
     },
-    [passcode, confirmPasscode, t, onClose]
+    [passcode, confirmPasscode, t, onClose, onSuccess]
   );
 
   if (!open) return null;
