@@ -95,6 +95,29 @@ function normalizeTodoItems(items: { text: string; done: boolean }[] | TodoItemW
   }));
 }
 
+/** Preserve list item ids by index so input focus is not lost on keystroke (Yjs does not store item ids). */
+function preserveBulletItemIds(
+  prevItems: BulletItemWithId[] | undefined,
+  newItems: BulletItemWithId[]
+): BulletItemWithId[] {
+  if (!prevItems || prevItems.length === 0) return newItems;
+  return newItems.map((newItem, idx) => {
+    const prevItem = prevItems[idx];
+    return prevItem ? { ...newItem, id: prevItem.id } : newItem;
+  });
+}
+
+function preserveTodoItemIds(
+  prevItems: TodoItemWithId[] | undefined,
+  newItems: TodoItemWithId[]
+): TodoItemWithId[] {
+  if (!prevItems || prevItems.length === 0) return newItems;
+  return newItems.map((newItem, idx) => {
+    const prevItem = prevItems[idx];
+    return prevItem ? { ...newItem, id: prevItem.id } : newItem;
+  });
+}
+
 function normalizeBlocks(blocks: NoteBlock[]): BlockWithId[] {
   return blocks
     .filter((b): b is NoteBlock => {
@@ -1015,9 +1038,17 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
             // Preserve existing IDs when possible to avoid re-renders
             // Use IDs from Yjs (source of truth) - they should always be present
             const usedIds = new Set<string>();
-            const blocksWithPreservedIds = normalizedNew.map((newBlock) => {
+            const blocksWithPreservedIds = normalizedNew.map((newBlock, blockIndex) => {
+              const prevBlock = normalizedPrev[blockIndex] as BlockWithId | undefined;
+              // Preserve list item ids so input focus is not lost on keystroke
+              let block = newBlock as BlockWithId;
+              if (block.type === 'bulletList' && prevBlock?.type === 'bulletList') {
+                block = { ...block, items: preserveBulletItemIds(prevBlock.items, block.items) };
+              } else if (block.type === 'todoList' && prevBlock?.type === 'todoList') {
+                block = { ...block, items: preserveTodoItemIds(prevBlock.items, block.items) };
+              }
               // Use ID from Yjs (stored in newBlock) - this is the source of truth
-              const yjsId = (newBlock as BlockWithId).id;
+              const yjsId = block.id;
               if (yjsId) {
                 // If this ID is already used, generate a new one (shouldn't happen in Yjs, but be safe)
                 if (usedIds.has(yjsId)) {
@@ -1027,10 +1058,10 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
                     newId = genBlockId();
                   }
                   usedIds.add(newId);
-                  return { ...newBlock, id: newId };
+                  return { ...block, id: newId };
                 }
                 usedIds.add(yjsId);
-                return { ...newBlock, id: yjsId };
+                return { ...block, id: yjsId };
               }
               
               // Fallback: generate new ID if Yjs didn't provide one (shouldn't happen)
@@ -1040,7 +1071,7 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
                 newId = genBlockId();
               }
               usedIds.add(newId);
-              return { ...newBlock, id: newId };
+              return { ...block, id: newId };
             });
             
             // Final safety check: ensure all IDs are unique
