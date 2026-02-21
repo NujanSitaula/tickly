@@ -246,8 +246,8 @@ export default function NoteView({
     const newItems = block.items.map((item, i) =>
       i === itemIndex ? { ...item, done: !item.done } : item
     );
-    const newBlocks = blocks.map((b, i) =>
-      i === blockIndex ? { ...b, items: newItems } : b
+    const newBlocks: NoteBlock[] = blocks.map((b, i) =>
+      i === blockIndex && b.type === 'todoList' ? { ...b, items: newItems } : b
     );
     onContentChange({ blocks: newBlocks });
   };

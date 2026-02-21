@@ -75,9 +75,7 @@ export function useYjsProvider({
 
     // Create WebSocket provider with token in params
     const wsProvider = new WebsocketProvider(wsUrl, `note-${noteId}`, doc, {
-      // Reconnect automatically
-      reconnect: true,
-      // Resync when reconnecting
+      connect: true,
       resyncInterval: 5000,
       // Pass token as query parameter
       params: {
@@ -93,10 +91,13 @@ export function useYjsProvider({
       }
     });
 
-    // Handle connection errors
-    wsProvider.on('connection-error', (event: { error: Error }) => {
-      console.error('Yjs WebSocket connection error:', event.error);
-      setError(event.error);
+    // Handle connection errors (signature: event, provider)
+    wsProvider.on('connection-error', (event: unknown, _provider?: WebsocketProvider) => {
+      const err = (event as { error?: Error })?.error;
+      if (err) {
+        console.error('Yjs WebSocket connection error:', err);
+        setError(err);
+      }
     });
 
     // Handle connection close

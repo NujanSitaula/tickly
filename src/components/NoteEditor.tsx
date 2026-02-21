@@ -62,10 +62,17 @@ interface BlockLock {
 
 const emptyContent: NoteContent = { blocks: [] };
 
-type BlockWithId = NoteBlock & { id: string };
-
 type BulletItemWithId = { id: string; text: string };
 type TodoItemWithId = { id: string; text: string; done: boolean };
+
+type BlockWithId =
+  | (Extract<NoteBlock, { type: 'paragraph' }> & { id: string })
+  | (Extract<NoteBlock, { type: 'image' }> & { id: string })
+  | { type: 'bulletList'; items: BulletItemWithId[]; id: string }
+  | { type: 'todoList'; title?: string; items: TodoItemWithId[]; id: string };
+
+/** Local editor state: blocks have stable ids and list items may have ids. */
+type NoteContentWithBlockIds = { blocks: BlockWithId[] };
 
 function genBlockId(): string {
   return `block-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -646,7 +653,7 @@ function BlockImage({
 
 // SAVE_DEBOUNCE_MS removed - autosave handled by useYjsAutosave hook
 
-function BlockDragPreview({ block }: { block: NoteBlock }) {
+function BlockDragPreview({ block }: { block: BlockWithId }) {
   if (!block || !block.type) {
     return <p className="text-sm text-muted-foreground">Block</p>;
   }
@@ -821,7 +828,7 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
   }, [yDoc, onTitleChange, readOnly, isTitleInputFocused, getCurrentTitle]);
 
   // Local state for rendering (synced from Yjs)
-  const [content, setContent] = useState<NoteContent>(() => ({
+  const [content, setContent] = useState<NoteContentWithBlockIds>(() => ({
     blocks: normalizeBlocks(initialContent?.blocks ?? []),
   }));
   
@@ -1413,7 +1420,7 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
             {block.type === 'bulletList' && (
               <BlockBulletList
                 items={block.items}
-                onChange={(items) => setBlock(index, { ...block, items })}
+                onChange={(items) => setBlock(index, { ...block, items: items.map((i) => i.text) })}
                 onRemove={() => removeBlock(index)}
                 readOnly={readOnly}
               />
@@ -1423,7 +1430,7 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
                 title={block.title}
                 onTitleChange={readOnly ? undefined : (t) => setBlock(index, { ...block, title: t })}
                 items={block.items}
-                onChange={(items) => setBlock(index, { ...block, items })}
+                onChange={(items) => setBlock(index, { ...block, items: items.map(({ text, done }) => ({ text, done })) })}
                 onRemove={() => removeBlock(index)}
                 readOnly={readOnly}
               />
@@ -1518,7 +1525,7 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
                     {block.type === 'bulletList' && (
                       <BlockBulletList
                         items={block.items}
-                        onChange={(items) => setBlock(index, { ...block, items })}
+                        onChange={(items) => setBlock(index, { ...block, items: items.map((i) => i.text) })}
                         readOnly={blockReadOnly}
                         onFocus={() => {
                           lockBlock(block.id);
@@ -1535,7 +1542,7 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
                         title={block.title}
                         onTitleChange={(t) => setBlock(index, { ...block, title: t })}
                         items={block.items}
-                        onChange={(items) => setBlock(index, { ...block, items })}
+                        onChange={(items) => setBlock(index, { ...block, items: items.map(({ text, done }) => ({ text, done })) })}
                         readOnly={blockReadOnly}
                         onFocus={() => {
                           lockBlock(block.id);

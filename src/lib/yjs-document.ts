@@ -299,7 +299,7 @@ export function findBlockIndexInYjs(yDoc: Y.Doc, targetBlock: NoteBlock, startIn
     if (type !== targetBlock.type) continue;
     
     // For paragraphs, match by text
-    if (type === 'paragraph' && blockMap.get('text') === targetBlock.text) {
+    if (type === 'paragraph' && targetBlock.type === 'paragraph' && blockMap.get('text') === targetBlock.text) {
       return i;
     }
     

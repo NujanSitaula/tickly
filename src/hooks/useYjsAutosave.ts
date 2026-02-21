@@ -58,14 +58,14 @@ export function useYjsAutosave({
       // Encode Yjs document state to binary
       const binaryState = Y.encodeStateAsUpdate(yDoc);
 
-      // POST to backend
+      // POST to backend (Blob for fetch BodyInit compatibility)
       const response = await fetch(`${API_URL}/notes/${noteId}/yjs-state`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/octet-stream',
         },
-        body: binaryState,
+        body: new Blob([new Uint8Array(binaryState)]),
       });
 
       if (!response.ok) {
@@ -160,7 +160,7 @@ export function useYjsAutosave({
           const binaryState = Y.encodeStateAsUpdate(yDoc);
           navigator.sendBeacon(
             `${API_URL}/notes/${noteId}/yjs-state`,
-            new Blob([binaryState], { type: 'application/octet-stream' })
+            new Blob([new Uint8Array(binaryState)], { type: 'application/octet-stream' })
           );
         }
       }

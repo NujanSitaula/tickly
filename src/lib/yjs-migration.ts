@@ -43,7 +43,7 @@ export async function migrateContentToYjs(
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/octet-stream',
       },
-      body: binaryState,
+      body: new Blob([new Uint8Array(binaryState)]),
     });
 
     if (!response.ok) {

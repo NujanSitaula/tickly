@@ -362,6 +362,18 @@ export const notes = {
     getToken: (noteId: number) => api<{ data: { token: string } }>(`/notes/${noteId}/share-token`),
     getByToken: (token: string) => api<{ data: Note }>(`/notes/share/${token}`),
   },
+  lock: {
+    lock: (noteId: number, passcode: string) =>
+      api<{ message?: string; data?: Note }>(`/notes/${noteId}/lock`, {
+        method: 'POST',
+        body: JSON.stringify({ passcode }),
+      }),
+    unlock: (noteId: number, passcode: string) =>
+      api<{ message?: string; unlock_token: string }>(`/notes/${noteId}/unlock`, {
+        method: 'POST',
+        body: JSON.stringify({ passcode }),
+      }),
+  },
   blocks: {
     lock: (noteId: number, blockId: string) =>
       api<{ message: string; block_id: string }>(`/notes/${noteId}/blocks/${blockId}/lock`, {

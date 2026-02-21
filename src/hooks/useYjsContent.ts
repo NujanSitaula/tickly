@@ -109,7 +109,7 @@ export function useYjsContent(
 
         const wsUrl = `${YJS_WEBSOCKET_URL}/notes/${noteId}`;
         const provider = new WebsocketProvider(wsUrl, `note-${noteId}`, yDoc, {
-          reconnect: true,
+          connect: true,
           resyncInterval: 5000,
           params: { token },
         });
