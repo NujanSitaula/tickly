@@ -284,18 +284,6 @@ function BlockBulletList({
     onChange(arrayMove(items, oldIndex, newIndex));
   };
 
-  if (readOnly) {
-    return (
-      <ul className="space-y-0.5 pl-0">
-        {items.map((item) => (
-          <BulletRowReadOnly key={item.id} value={item.text} />
-        ))}
-      </ul>
-    );
-  }
-
-  const activeBullet = activeBulletId != null ? items.find((i) => i.id === activeBulletId) : null;
-
   const handleFirstFocus = useCallback(() => {
     if (!readOnly) {
       onFocus?.();
@@ -314,6 +302,18 @@ function BlockBulletList({
       }, 100);
     }
   }, [readOnly, onBlur]);
+
+  if (readOnly) {
+    return (
+      <ul className="space-y-0.5 pl-0">
+        {items.map((item) => (
+          <BulletRowReadOnly key={item.id} value={item.text} />
+        ))}
+      </ul>
+    );
+  }
+
+  const activeBullet = activeBulletId != null ? items.find((i) => i.id === activeBulletId) : null;
 
   return (
     <div className="group" data-bullet-list>
@@ -431,7 +431,7 @@ function SortableTodoRow({
       </button>
       <input
         type="text"
-        value={item.text}
+        value={item.text ?? ''}
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
         onBlur={onBlur}
@@ -505,21 +505,6 @@ function BlockTodoList({
     onChange(arrayMove(items, oldIndex, newIndex));
   };
 
-  if (readOnly) {
-    return (
-      <div className="space-y-0">
-        {title?.trim() && (
-          <p className="mb-2 text-sm font-bold text-foreground">{title}</p>
-        )}
-        {items.map((item) => (
-          <TodoRowReadOnly key={item.id} item={item} />
-        ))}
-      </div>
-    );
-  }
-
-  const activeTodo = activeTodoId != null ? items.find((i) => i.id === activeTodoId) : null;
-
   const handleFirstFocus = useCallback(() => {
     if (!readOnly) {
       onFocus?.();
@@ -538,6 +523,21 @@ function BlockTodoList({
       }, 100);
     }
   }, [readOnly, onBlur]);
+
+  if (readOnly) {
+    return (
+      <div className="space-y-0">
+        {title?.trim() && (
+          <p className="mb-2 text-sm font-bold text-foreground">{title}</p>
+        )}
+        {items.map((item) => (
+          <TodoRowReadOnly key={item.id} item={item} />
+        ))}
+      </div>
+    );
+  }
+
+  const activeTodo = activeTodoId != null ? items.find((i) => i.id === activeTodoId) : null;
 
   return (
     <div className="group" data-todo-list>
