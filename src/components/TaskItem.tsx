@@ -81,7 +81,7 @@ export default function TaskItem({
           e.stopPropagation();
           onToggle();
         }}
-        className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
+        className="cursor-pointer flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
         aria-label={isDone ? 'Mark as incomplete' : 'Mark as complete'}
       >
         {isDone ? (
@@ -91,11 +91,16 @@ export default function TaskItem({
         )}
       </button>
 
-      {/* Task Content */}
-      <div className="flex-1 min-w-0" onClick={onClick}>
+      {/* Task Content - button for keyboard and screen reader */}
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex-1 min-w-0 text-left cursor-pointer rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        aria-label={`Open task: ${task.title}`}
+      >
         <div className="flex items-center gap-3">
           <span
-            className={`flex-1 text-foreground cursor-pointer ${
+            className={`flex-1 text-foreground ${
               isDone ? 'line-through text-muted-foreground' : ''
             }`}
           >
@@ -116,13 +121,13 @@ export default function TaskItem({
 
         {task.due_date && (
           <div className="flex items-center gap-1.5 mt-1">
-            <Calendar className={`h-3.5 w-3.5 ${isOverdue ? 'text-red-500' : 'text-muted-foreground'}`} />
+            <Calendar className={`h-3.5 w-3.5 ${isOverdue ? 'text-red-500' : 'text-muted-foreground'}`} aria-hidden="true" />
             <span className={`text-xs ${isOverdue ? 'text-red-500' : 'text-muted-foreground'}`}>
               {formatDate(task.due_date)}
             </span>
           </div>
         )}
-      </div>
+      </button>
 
       {/* Action Icons */}
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -132,14 +137,14 @@ export default function TaskItem({
             e.stopPropagation();
             onClick();
           }}
-          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="cursor-pointer p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           aria-label="Edit task"
         >
           <Pencil className="h-4 w-4" />
         </button>
         <button
           type="button"
-          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="cursor-pointer p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           aria-label="Move to project"
         >
           <Folder className="h-4 w-4" />
@@ -150,7 +155,7 @@ export default function TaskItem({
             e.stopPropagation();
             onClick();
           }}
-          className="relative p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="cursor-pointer relative p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           aria-label="Comments"
         >
           <MessageSquare className="h-4 w-4" />
@@ -162,7 +167,7 @@ export default function TaskItem({
         </button>
         <button
           type="button"
-          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="cursor-pointer p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           aria-label="More options"
         >
           <MoreHorizontal className="h-4 w-4" />

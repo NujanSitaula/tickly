@@ -292,6 +292,7 @@ export default function TaskDetailModal({
         }`}
         onClick={onClose}
         onKeyDown={handleKeyDown}
+        aria-hidden="true"
       />
 
       {/* Modal */}
@@ -299,8 +300,13 @@ export default function TaskDetailModal({
         className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-200 ease-out ${
           visible ? 'opacity-100' : 'opacity-0'
         }`}
+        role="presentation"
       >
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="task-detail-title"
+          aria-describedby="task-detail-content"
           className={`flex max-h-[min(90vh,calc(100dvh-8rem))] w-full max-w-4xl flex-col rounded-xl border border-border bg-background shadow-lg transition-transform duration-200 ease-out ${
             visible ? 'translate-y-0 scale-100' : 'translate-y-2 scale-[0.98]'
           }`}
@@ -309,14 +315,16 @@ export default function TaskDetailModal({
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
+            <h2 id="task-detail-title" className="sr-only">{task.title}</h2>
             <div className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              <Briefcase className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <span className="text-sm text-muted-foreground">{projectName}</span>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              aria-label="Close"
+              className="cursor-pointer rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label="Close dialog"
             >
               <X className="h-5 w-5" />
             </button>
@@ -327,7 +335,7 @@ export default function TaskDetailModal({
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 overflow-y-auto">
+            <div id="task-detail-content" className="flex min-h-0 flex-1 overflow-y-auto">
               {/* Left Panel - Main Content */}
               <div className="flex-1 p-6 space-y-6">
                 {/* Title */}
@@ -335,7 +343,8 @@ export default function TaskDetailModal({
                   <button
                     type="button"
                     onClick={handleToggleComplete}
-                    className="flex-shrink-0 mt-1 text-muted-foreground hover:text-primary transition-colors"
+                    className="cursor-pointer flex-shrink-0 mt-1 text-muted-foreground hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                    aria-label={task.completed ? 'Mark task as incomplete' : 'Mark task as complete'}
                   >
                     {task.completed ? (
                       <CheckCircle2 className="h-6 w-6 text-primary" />
@@ -368,7 +377,7 @@ export default function TaskDetailModal({
                     }}
                     placeholder="Add description..."
                     rows={4}
-                    className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                   />
                 </div>
 
@@ -383,7 +392,7 @@ export default function TaskDetailModal({
                         <button
                           type="button"
                           onClick={() => handleToggleSubtask(subtask)}
-                          className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                          className="cursor-pointer flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
                         >
                           {subtask.completed ? (
                             <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -405,7 +414,7 @@ export default function TaskDetailModal({
                         <button
                           type="button"
                           onClick={() => handleDeleteSubtask(subtask.id)}
-                          className="text-muted-foreground hover:text-destructive"
+                          className="cursor-pointer text-muted-foreground hover:text-destructive"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -433,7 +442,7 @@ export default function TaskDetailModal({
                         <button
                           type="button"
                           onClick={handleAddSubtask}
-                          className="text-primary hover:text-primary/80"
+                          className="cursor-pointer text-primary hover:text-primary/80"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -442,7 +451,7 @@ export default function TaskDetailModal({
                       <button
                         type="button"
                         onClick={() => setShowSubtaskInput(true)}
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className="cursor-pointer flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Add sub-task</span>
@@ -459,9 +468,17 @@ export default function TaskDetailModal({
                   <div className="space-y-4">
                     {comments.map((comment) => (
                       <div key={comment.id} className="flex items-start gap-3">
-                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary">
-                          {comment.user?.name?.[0]?.toUpperCase() || 'U'}
-                        </div>
+                        {comment.user?.avatar_url ? (
+                          <img
+                            src={comment.user.avatar_url}
+                            alt={comment.user.name || 'User avatar'}
+                            className="flex-shrink-0 h-8 w-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary">
+                            {comment.user?.name?.[0]?.toUpperCase() || 'U'}
+                          </div>
+                        )}
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-medium text-foreground">
@@ -476,9 +493,17 @@ export default function TaskDetailModal({
                       </div>
                     ))}
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary">
-                        {user?.name?.[0]?.toUpperCase() || 'U'}
-                      </div>
+                      {user?.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.name || 'User avatar'}
+                          className="flex-shrink-0 h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary">
+                          {user?.name?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                      )}
                       <div className="flex-1 flex items-center gap-2">
                         <input
                           type="text"
@@ -491,11 +516,11 @@ export default function TaskDetailModal({
                             }
                           }}
                           placeholder="Comment"
-                          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                         />
                         <button
                           type="button"
-                          className="p-2 text-muted-foreground hover:text-foreground"
+                          className="cursor-pointer p-2 text-muted-foreground hover:text-foreground"
                           aria-label="Attach file"
                         >
                           <Paperclip className="h-4 w-4" />
@@ -517,7 +542,7 @@ export default function TaskDetailModal({
                     <button
                       type="button"
                       onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                      className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      className="cursor-pointer flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         {selectedProject ? (
@@ -551,7 +576,7 @@ export default function TaskDetailModal({
                                 setShowProjectDropdown(false);
                                 setDirty(true);
                               }}
-                              className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                              className={`cursor-pointer flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
                                 selectedProjectId === null
                                   ? 'bg-accent text-accent-foreground'
                                   : 'text-popover-foreground hover:bg-muted'
@@ -568,7 +593,7 @@ export default function TaskDetailModal({
                                   setShowProjectDropdown(false);
                                   setDirty(true);
                                 }}
-                                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                                className={`cursor-pointer flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
                                   selectedProjectId === project.id
                                     ? 'bg-accent text-accent-foreground'
                                     : 'text-popover-foreground hover:bg-muted'
@@ -603,7 +628,7 @@ export default function TaskDetailModal({
                         setDueDate(e.target.value);
                         setDirty(true);
                       }}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none"
                     />
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Star className="h-3 w-3 text-orange-500" />
@@ -622,7 +647,7 @@ export default function TaskDetailModal({
                     <button
                       type="button"
                       onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
-                      className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      className="cursor-pointer flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         <Flag
@@ -657,7 +682,7 @@ export default function TaskDetailModal({
                                   setShowPriorityDropdown(false);
                                   setDirty(true);
                                 }}
-                                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                                className={`cursor-pointer flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
                                   priority === p
                                     ? 'bg-accent text-accent-foreground'
                                     : 'text-popover-foreground hover:bg-muted'
@@ -681,7 +706,7 @@ export default function TaskDetailModal({
                   </label>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                    className="cursor-pointer flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Add label</span>
@@ -695,7 +720,7 @@ export default function TaskDetailModal({
                   </label>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                    className="cursor-pointer flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Add reminder</span>

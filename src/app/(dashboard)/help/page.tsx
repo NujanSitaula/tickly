@@ -5,12 +5,12 @@ import { HelpCircle } from 'lucide-react';
 export default function HelpPage() {
   return (
     <div className="h-full">
-      <div className="border-b border-border bg-background px-8 py-6">
+      <header className="border-b border-border bg-background px-8 py-6">
         <div className="flex items-center gap-3">
           <HelpCircle className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-semibold text-foreground">Help & Resources</h1>
         </div>
-      </div>
+      </header>
 
       <div className="px-8 py-6">
         <div className="max-w-2xl space-y-6">

@@ -36,8 +36,17 @@ export default function TaskCard({ task, onClick, onToggle }: TaskCardProps) {
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className={`group cursor-pointer rounded-lg border border-border bg-card p-3 shadow-sm hover:shadow-md transition-all hover:border-primary/50 ${priorityAccent}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`group cursor-pointer rounded-lg border border-border bg-card p-3 shadow-sm hover:shadow-md transition-all hover:border-primary/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${priorityAccent}`}
+      aria-label={`Open task: ${task.title}`}
     >
       {/* Checkbox and Title */}
       <div className="flex items-start gap-2 mb-2">
@@ -47,7 +56,7 @@ export default function TaskCard({ task, onClick, onToggle }: TaskCardProps) {
             e.stopPropagation();
             onToggle();
           }}
-          className="flex-shrink-0 mt-0.5 text-muted-foreground hover:text-primary transition-colors"
+          className="flex-shrink-0 mt-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
           aria-label={isDone ? 'Mark as incomplete' : 'Mark as complete'}
         >
           {isDone ? (
@@ -80,7 +89,7 @@ export default function TaskCard({ task, onClick, onToggle }: TaskCardProps) {
       <div className="flex items-center justify-between gap-2 mt-2">
         {task.due_date && (
           <div className="flex items-center gap-1">
-            <Calendar className={`h-3 w-3 ${isOverdue ? 'text-red-500' : 'text-muted-foreground'}`} />
+            <Calendar className={`h-3 w-3 ${isOverdue ? 'text-red-500' : 'text-muted-foreground'}`} aria-hidden="true" />
             <span className={`text-xs ${isOverdue ? 'text-red-500' : 'text-muted-foreground'}`}>
               {formatDate(task.due_date)}
             </span>
@@ -88,7 +97,7 @@ export default function TaskCard({ task, onClick, onToggle }: TaskCardProps) {
         )}
         {commentCount > 0 && (
           <div className="flex items-center gap-1 text-muted-foreground">
-            <MessageSquare className="h-3 w-3" />
+            <MessageSquare className="h-3 w-3" aria-hidden="true" />
             <span className="text-xs">{commentCount}</span>
           </div>
         )}
@@ -97,6 +106,7 @@ export default function TaskCard({ task, onClick, onToggle }: TaskCardProps) {
             className="h-2 w-2 rounded-full"
             style={{ backgroundColor: task.project.color || '#94a3b8' }}
             title={task.project.name}
+            aria-hidden="true"
           />
         )}
       </div>

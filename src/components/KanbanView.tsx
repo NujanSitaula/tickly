@@ -435,13 +435,13 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
                             }}
                             autoFocus
                             placeholder="Task name"
-                            className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none"
                           />
                           <div className="flex gap-2">
                             <button
                               type="submit"
                               disabled={addingTask || !newTaskTitle.trim()}
-                              className="flex-1 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                              className="cursor-pointer flex-1 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                             >
                               Add
                             </button>
@@ -451,7 +451,7 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
                                 setShowAddInput(false);
                                 setNewTaskTitle('');
                               }}
-                              className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                              className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
                             >
                               Cancel
                             </button>
@@ -461,7 +461,7 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
                         <button
                           type="button"
                           onClick={() => setShowAddInput(true)}
-                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          className="cursor-pointer flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                         >
                           <Plus className="h-4 w-4" />
                           <span>{tCommon('addTask')}</span>

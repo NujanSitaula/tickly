@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import TaskList from '@/components/TaskList';
 import ViewSwitcher from '@/components/ViewSwitcher';
 import { useViewPreference } from '@/hooks/useViewPreference';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TodayPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -16,6 +17,8 @@ export default function TodayPage() {
   const [view, setView] = useViewPreference('today');
   const tDashboard = useTranslations('dashboard');
   const locale = useLocale();
+   const { user } = useAuth();
+  const mode = user?.mode ?? 'advanced';
 
   const loadTasks = useCallback(async () => {
     setRefreshing(true);
@@ -23,9 +26,17 @@ export default function TodayPage() {
       setLoading(true);
     }
     try {
-      // Load today's tasks (filter by due_date when backend supports it)
       const res = await tasksApi.list();
-      setTasks(res.data);
+      if (mode === 'basic') {
+        const todayKey = new Date().toISOString().slice(0, 10);
+        setTasks(
+          res.data.filter(
+            (t) => t.due_date && t.due_date.slice(0, 10) === todayKey
+          )
+        );
+      } else {
+        setTasks(res.data);
+      }
       hasLoadedOnce.current = true;
     } catch (error) {
       console.error('Failed to load tasks:', error);
@@ -33,7 +44,7 @@ export default function TodayPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
     loadTasks();
@@ -81,7 +92,7 @@ export default function TodayPage() {
               <p className="text-sm text-muted-foreground">{todayFormatted}</p>
             </div>
           </div>
-          <ViewSwitcher view={view} onViewChange={setView} />
+          {mode !== 'basic' && <ViewSwitcher view={view} onViewChange={setView} />}
         </div>
       </div>
 
@@ -92,7 +103,7 @@ export default function TodayPage() {
             <p className="mt-4 text-sm text-muted-foreground">{tDashboard('common.loadingTasks')}</p>
           </div>
         ) : (
-          <TaskList tasks={tasks} onTaskUpdate={loadTasks} view={view} />
+          <TaskList tasks={tasks} onTaskUpdate={loadTasks} view={mode === 'basic' ? 'list' : view} />
         )}
       </div>
     </div>

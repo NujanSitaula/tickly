@@ -1,13 +1,14 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { projects as projectsApi, auth as authApi, type Project } from '@/lib/api';
+import { projects as projectsApi, auth as authApi, tasks as tasksApi, type Project } from '@/lib/api';
 import {
   Calendar,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  FileText,
   Filter,
   HelpCircle,
   Inbox,
@@ -40,6 +41,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
   const router = useRouter();
   const pathname = usePathname();
   const isLg = useIsLg();
+  const mode = user?.mode ?? 'advanced';
   const effectiveExpanded = !collapsed || !isLg;
   const onMobileCloseRef = useRef(onMobileClose);
   onMobileCloseRef.current = onMobileClose;
@@ -60,17 +62,27 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
   const [editColor, setEditColor] = useState<string | null>(null);
   const [editPriority, setEditPriority] = useState<number>(4);
   const [editIcon, setEditIcon] = useState<string>('');
-  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  const [deleteReason, setDeleteReason] = useState('');
-  const [deletingAccount, setDeletingAccount] = useState(false);
-  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
   const tSidebar = useTranslations('dashboard.sidebar');
   const tCommon = useTranslations('dashboard.common');
-  const tDeletionReasons = useTranslations('dashboard.deletionReasons');
-  const [selectedDeletionReason, setSelectedDeletionReason] = useState<
-    'complicated' | 'missing_features' | 'other_tool' | 'cleanup' | 'other'
-  >('complicated');
-  const [missingFeatures, setMissingFeatures] = useState<string[]>(['']);
+  const [todayCount, setTodayCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setTodayCount(null);
+      return;
+    }
+    const loadTodayCount = async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const res = await tasksApi.list({ due_date: today, completed: false });
+        setTodayCount(res.data.length);
+      } catch (error) {
+        console.error('Failed to load today task count:', error);
+        setTodayCount(null);
+      }
+    };
+    loadTodayCount();
+  }, [user?.id, mode]);
 
   const getInitials = (name: string) => {
     return name
@@ -83,10 +95,19 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
 
   const navItems = [
     { icon: Search, label: tSidebar('search'), href: '/search' },
-    { icon: Inbox, label: tSidebar('inbox'), href: '/inbox', count: 0 },
-    { icon: Calendar, label: tSidebar('today'), href: '/today', count: 0 },
+    { icon: Inbox, label: tSidebar('inbox'), href: '/inbox' },
+    {
+      icon: Calendar,
+      label: tSidebar('today'),
+      href: '/today',
+      count: todayCount ?? undefined,
+    },
     { icon: LayoutGrid, label: tSidebar('upcoming'), href: '/upcoming' },
-    { icon: Filter, label: tSidebar('filtersLabels'), href: '/filters' },
+    { icon: Calendar, label: tSidebar('calendar'), href: '/calendar' },
+    { icon: FileText, label: tSidebar('notes'), href: '/notes' },
+    ...(mode === 'basic'
+      ? []
+      : [{ icon: Filter, label: tSidebar('filtersLabels'), href: '/filters' as const }]),
     { icon: CheckCircle2, label: tSidebar('completed'), href: '/completed' },
   ];
 
@@ -108,12 +129,12 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
   const asideContent = (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-3 shrink-0">
+      <header className="flex items-center justify-between gap-2 border-b border-border px-3 py-3 shrink-0">
         {!isLg && onMobileClose && (
           <button
             type="button"
             onClick={onMobileClose}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="cursor-pointer flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             aria-label="Close menu"
           >
             <X className="h-4 w-4" />
@@ -141,7 +162,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
           <button
             type="button"
             onClick={onToggle}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="cursor-pointer flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? (
@@ -151,19 +172,31 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
             )}
           </button>
         )}
-      </div>
+      </header>
 
       {/* User Profile */}
       <div className="border-b border-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary font-medium text-sm">
-            {user?.name ? getInitials(user.name) : 'U'}
-          </div>
+          {user?.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={user.name || 'User avatar'}
+              className="h-8 w-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary font-medium text-sm">
+              {user?.name ? getInitials(user.name) : 'U'}
+            </div>
+          )}
           {effectiveExpanded && (
             <div className="relative flex-1">
               <button
+                type="button"
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex w-full items-center justify-between text-sm font-medium text-foreground hover:text-primary transition-colors"
+                className="cursor-pointer flex w-full items-center justify-between text-sm font-medium text-foreground hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+                aria-expanded={showUserMenu}
+                aria-haspopup="menu"
+                aria-label="User menu"
               >
                 <span className="truncate">{user?.name || 'User'}</span>
                 <ChevronDown className="h-4 w-4" />
@@ -181,22 +214,17 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                       </div>
                       <button
                         onClick={handleLogout}
-                        className="w-full rounded-md px-3 py-2 text-left text-sm text-popover-foreground hover:bg-muted transition-colors"
+                        className="cursor-pointer w-full rounded-md px-3 py-2 text-left text-sm text-popover-foreground hover:bg-muted transition-colors"
                       >
                         Sign out
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          setDeleteReason('');
-                          setDeleteAccountError(null);
-                          setShowDeleteAccount(true);
-                        }}
-                        className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      <Link
+                        href="/settings"
+                        onClick={() => setShowUserMenu(false)}
+                        className="cursor-pointer block w-full rounded-md px-3 py-2 text-left text-sm text-foreground hover:bg-muted transition-colors"
                       >
-                        Delete account
-                      </button>
+                        Settings
+                      </Link>
                     </div>
                   </div>
                 </>
@@ -210,7 +238,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
       <div className={`flex border-b border-border shrink-0 ${effectiveExpanded ? 'p-4' : 'justify-center px-3 py-3'}`}>
         <button
           onClick={onOpenAddTask}
-          className={`flex h-10 items-center justify-center rounded-lg bg-primary py-2.5 text-primary-foreground transition-[width,padding] duration-200 ease-out hover:bg-primary/90 shrink-0 ${
+          className={`cursor-pointer flex h-10 items-center justify-center rounded-lg bg-primary py-2.5 text-primary-foreground transition-[width,padding] duration-200 ease-out hover:bg-primary/90 shrink-0 ${
             effectiveExpanded ? 'w-full gap-2 px-4' : 'w-10 gap-0 px-0'
           }`}
           title={!effectiveExpanded ? tCommon('addTask') : undefined}
@@ -227,7 +255,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav className="flex-1 overflow-y-auto p-2" aria-label="Main navigation">
         <div className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -257,11 +285,11 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
           })}
         </div>
 
-        {/* Projects Section */}
-        {effectiveExpanded && (
-          <div className="mt-6 group/header">
+        {/* Projects Section (Advanced mode only) */}
+        {effectiveExpanded && mode !== 'basic' && (
+          <section className="mt-6 group/header" aria-labelledby="projects-heading">
             <div className="mb-2 flex items-center justify-between gap-1 px-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h3 id="projects-heading" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {tSidebar('myProjects')}
               </h3>
               <span className="text-xs text-muted-foreground shrink-0">
@@ -270,7 +298,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
               <button
                 type="button"
                 onClick={() => setShowAddProjectModal(true)}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors opacity-100"
+                className="cursor-pointer flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors opacity-100"
                 aria-label="Add project"
               >
                 <Plus className="h-4 w-4" />
@@ -315,7 +343,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                             e.stopPropagation();
                             setProjectMenuOpenId(projectMenuOpenId === project.id ? null : project.id);
                           }}
-                          className="absolute inset-0 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-opacity opacity-0 group-hover/project:opacity-100 pointer-events-none group-hover/project:pointer-events-auto"
+                          className="cursor-pointer absolute inset-0 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-opacity opacity-0 group-hover/project:opacity-100 pointer-events-none group-hover/project:pointer-events-auto"
                           aria-label="Project options"
                         >
                           <MoreHorizontal className="h-4 w-4" />
@@ -342,7 +370,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                                 setEditPriority(project.priority ?? 4);
                                 setEditIcon(project.icon ?? '');
                               }}
-                              className="w-full rounded-md px-3 py-2 text-left text-sm text-popover-foreground hover:bg-muted transition-colors"
+                              className="cursor-pointer w-full rounded-md px-3 py-2 text-left text-sm text-popover-foreground hover:bg-muted transition-colors"
                             >
                               Edit project details
                             </button>
@@ -353,7 +381,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                                 setDeleteConfirmName('');
                                 setProjectMenuOpenId(null);
                               }}
-                              className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                              className="cursor-pointer w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
                             >
                               Delete project
                             </button>
@@ -365,10 +393,10 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                 );
               })}
             </div>
-          </div>
+          </section>
         )}
 
-      {showAddProjectModal && (
+      {mode !== 'basic' && showAddProjectModal && (
         <AddProjectModal
           open={showAddProjectModal}
           onClose={() => setShowAddProjectModal(false)}
@@ -379,9 +407,13 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-border p-4">
+      <footer className="border-t border-border p-4">
         {!effectiveExpanded ? (
-          <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+          <button
+            type="button"
+            className="cursor-pointer rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label={tSidebar('helpResources')}
+          >
             <HelpCircle className="h-5 w-5" />
           </button>
         ) : (
@@ -396,7 +428,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
             <LanguageSwitcher />
           </div>
         )}
-      </div>
+      </footer>
 
       {/* Delete Project Confirmation Modal */}
       {projectToDelete && (
@@ -411,7 +443,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
               type="text"
               value={deleteConfirmName}
               onChange={(e) => setDeleteConfirmName(e.target.value)}
-              className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               placeholder="Project name"
             />
             <div className="flex justify-end gap-2">
@@ -421,7 +453,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                   setProjectToDelete(null);
                   setDeleteConfirmName('');
                 }}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
@@ -442,7 +474,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                     console.error('Failed to delete project:', error);
                   }
                 }}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Delete project
               </button>
@@ -465,7 +497,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                   placeholder="Project name"
                 />
               </div>
@@ -485,7 +517,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                       type="text"
                       value={editColor ?? ''}
                       onChange={(e) => setEditColor(e.target.value || null)}
-                      className="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none"
                       placeholder="#RRGGBB"
                     />
                   </div>
@@ -497,7 +529,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                   <select
                     value={editPriority}
                     onChange={(e) => setEditPriority(Number(e.target.value) || 4)}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none"
                   >
                     <option value={1}>P1</option>
                     <option value={2}>P2</option>
@@ -515,7 +547,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                   value={editIcon}
                   maxLength={8}
                   onChange={(e) => setEditIcon(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                   placeholder="e.g. ✅, 📝"
                 />
               </div>
@@ -525,7 +557,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                   onClick={() => {
                     setEditingProject(null);
                   }}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                  className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
                 >
                   Cancel
                 </button>
@@ -547,7 +579,7 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                       console.error('Failed to update project:', error);
                     }
                   }}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Save changes
                 </button>
@@ -557,157 +589,6 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
         </div>
       )}
 
-      {/* Delete Account Modal */}
-      {showDeleteAccount && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[min(90vh,calc(100dvh-8rem))] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-lg">
-            <h2 className="text-lg font-semibold text-foreground mb-2">{tCommon('deleteAccountTitle')}</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              {tCommon('deleteAccountIntro')}
-            </p>
-            <div className="mb-4 space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {tCommon('deleteAccountReasonLabel')}
-              </p>
-              <div className="space-y-1">
-                {[
-                  { key: 'complicated', label: tDeletionReasons('complicated') },
-                  { key: 'missing_features', label: tDeletionReasons('missing_features') },
-                  { key: 'other_tool', label: tDeletionReasons('other_tool') },
-                  { key: 'cleanup', label: tDeletionReasons('cleanup') },
-                  { key: 'other', label: tDeletionReasons('other') },
-                ].map((option) => (
-                  <label
-                    key={option.key}
-                    className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-foreground hover:bg-muted cursor-pointer"
-                  >
-                    <input
-                      type="radio"
-                      name="delete-reason"
-                      value={option.key}
-                      checked={selectedDeletionReason === option.key}
-                      onChange={() => setSelectedDeletionReason(option.key as any)}
-                      className="h-3.5 w-3.5 border-border text-primary focus:ring-primary"
-                    />
-                    <span className="truncate">{option.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            {selectedDeletionReason === 'missing_features' && (
-              <div className="mb-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {tCommon('deleteAccountFeatureSectionTitle')}
-                </p>
-                <div className="space-y-2">
-                  {missingFeatures.map((feature, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={feature}
-                        onChange={(e) => {
-                          const next = [...missingFeatures];
-                          next[idx] = e.target.value;
-                          setMissingFeatures(next);
-                        }}
-                        placeholder={tCommon('deleteAccountFeaturePlaceholder')}
-                        className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                      {missingFeatures.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = missingFeatures.filter((_, i) => i !== idx);
-                            setMissingFeatures(next.length ? next : ['']);
-                          }}
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          {tCommon('deleteAccountRemoveFeature')}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMissingFeatures((prev) => [...prev, ''])}
-                  className="mt-2 text-xs font-medium text-primary hover:text-primary/80"
-                >
-                  {tCommon('deleteAccountAddFeature')}
-                </button>
-              </div>
-            )}
-            <textarea
-              value={deleteReason}
-              onChange={(e) => setDeleteReason(e.target.value)}
-              rows={4}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-3"
-              placeholder={tCommon('deleteAccountReasonPlaceholder')}
-            />
-            {deleteAccountError && (
-              <p className="mb-3 text-sm text-red-600">
-                {deleteAccountError}
-              </p>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDeleteAccount(false);
-                  setDeleteReason('');
-                  setDeleteAccountError(null);
-                }}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
-              >
-                {tCommon('deleteAccountCancel')}
-              </button>
-              <button
-                type="button"
-                disabled={deletingAccount}
-                onClick={async () => {
-                  if (!selectedDeletionReason) {
-                    setDeleteAccountError(tCommon('deleteAccountReasonError'));
-                    return;
-                  }
-                  setDeletingAccount(true);
-                  setDeleteAccountError(null);
-                  try {
-                    const reasonLabel = tDeletionReasons(selectedDeletionReason);
-                    const parts: string[] = [];
-                    parts.push(`Reason: ${reasonLabel}`);
-                    const trimmedDetail = deleteReason.trim();
-                    if (trimmedDetail) {
-                      parts.push(`Details: ${trimmedDetail}`);
-                    }
-                    const featureList = missingFeatures.map((f) => f.trim()).filter(Boolean);
-                    if (selectedDeletionReason === 'missing_features' && featureList.length > 0) {
-                      parts.push('Missing features:');
-                      for (const f of featureList) {
-                        parts.push(`- ${f}`);
-                      }
-                    }
-                    const composedReason = parts.join('\n');
-                    await authApi.deleteAccount(composedReason || reasonLabel);
-                    // Clear local token and send user to login
-                    if (typeof window !== 'undefined') {
-                      window.localStorage.removeItem('tickly_token');
-                    }
-                    setShowDeleteAccount(false);
-                    router.replace('/login');
-                  } catch (error: any) {
-                    setDeleteAccountError(error?.message ?? 'Failed to delete account. Please try again.');
-                  } finally {
-                    setDeletingAccount(false);
-                  }
-                }}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {deletingAccount ? tCommon('deleteAccountDeleting') : tCommon('deleteAccountConfirm')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
   return (
@@ -718,8 +599,8 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
       <aside
         className={
           isLg
-            ? `flex h-screen flex-col border-r border-border bg-muted/30 shrink-0 transition-[width] duration-200 ease-out ${collapsed ? 'w-16' : 'w-64'}`
-            : `fixed inset-y-0 left-0 z-30 flex h-screen w-64 flex-col border-r border-border bg-background shadow-xl transition-transform duration-200 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
+            ? `flex h-full flex-col border-r border-border bg-muted/30 shrink-0 transition-[width] duration-200 ease-out ${collapsed ? 'w-16' : 'w-64'}`
+            : `fixed inset-y-0 left-0 z-30 flex h-full w-64 flex-col border-r border-border bg-background shadow-xl transition-transform duration-200 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
         }
       >
         {asideContent}

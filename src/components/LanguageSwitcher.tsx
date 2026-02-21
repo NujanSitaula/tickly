@@ -58,7 +58,7 @@ export default function LanguageSwitcher({ placement = 'top' }: LanguageSwitcher
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        className="cursor-pointer flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label="Change language"
       >
         <Globe className="h-4 w-4" />
@@ -78,7 +78,7 @@ export default function LanguageSwitcher({ placement = 'top' }: LanguageSwitcher
                 <button
                   key={loc}
                   onClick={() => handleLanguageChange(loc)}
-                  className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                  className={`cursor-pointer w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
                     locale === loc
                       ? 'bg-accent text-accent-foreground'
                       : 'text-popover-foreground hover:bg-muted'

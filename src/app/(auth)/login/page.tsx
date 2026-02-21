@@ -10,15 +10,6 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
-function decodeEmailParam(encoded: string | null): string {
-  if (!encoded) return '';
-  try {
-    return atob(decodeURIComponent(encoded));
-  } catch {
-    return encoded;
-  }
-}
-
 export default function LoginPage() {
   const t = useTranslations('auth');
   const { login, reactivateAccount } = useAuth();
@@ -30,16 +21,16 @@ export default function LoginPage() {
   const [error, setError] = useState(searchParams.get('error') || '');
   const [loading, setLoading] = useState(false);
 
-  const reactivateEmail = useMemo(() => {
+  const reactivateToken = useMemo(() => {
     if (searchParams.get('reactivate') !== '1') return null;
-    return decodeEmailParam(searchParams.get('email'));
+    return searchParams.get('reactivate_token');
   }, [searchParams]);
   const [showReactivate, setShowReactivate] = useState(false);
   const [reactivating, setReactivating] = useState(false);
 
   useEffect(() => {
-    if (reactivateEmail) setShowReactivate(true);
-  }, [reactivateEmail]);
+    if (reactivateToken) setShowReactivate(true);
+  }, [reactivateToken]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,11 +52,11 @@ export default function LoginPage() {
   }
 
   async function handleReactivateConfirm() {
-    if (!reactivateEmail) return;
+    if (!reactivateToken) return;
     setError('');
     setReactivating(true);
     try {
-      await reactivateAccount(reactivateEmail);
+      await reactivateAccount({ reactivate_token: reactivateToken });
       router.push('/');
       router.refresh();
     } catch (err) {
@@ -80,7 +71,7 @@ export default function LoginPage() {
     router.replace('/login');
   }
 
-  if (showReactivate && reactivateEmail) {
+  if (showReactivate && reactivateToken) {
     return (
       <div className="w-full space-y-8">
         <div className="flex items-center justify-between">
@@ -109,7 +100,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleReactivateCancel}
-              className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+              className="cursor-pointer flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
             >
               {t('reactivateCancel')}
             </button>
@@ -117,7 +108,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleReactivateConfirm}
               disabled={reactivating}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {reactivating ? t('signingIn') : t('reactivateConfirm')}
             </button>
@@ -168,7 +159,8 @@ export default function LoginPage() {
       <button
         type="button"
         onClick={handleGoogleLogin}
-        className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        className="cursor-pointer flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        aria-label={t('continueWithGoogle')}
       >
         <svg className="h-5 w-5" viewBox="0 0 24 24">
           <path
@@ -220,7 +212,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="you@example.com"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
         </div>
 
@@ -236,12 +228,12 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder={t('password')}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+              className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
@@ -255,8 +247,9 @@ export default function LoginPage() {
 
         <div className="flex items-center justify-between">
           <Link
-            href="#"
-            className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:rounded"
+            href="/forgot-password"
+            className="text-sm text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
+            aria-label="Forgot password"
           >
             {t('forgotPassword')}
           </Link>
@@ -265,7 +258,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="cursor-pointer w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? t('signingIn') : t('logIn')}
         </button>
@@ -274,11 +267,11 @@ export default function LoginPage() {
       {/* Terms and Privacy */}
       <p className="text-xs text-muted-foreground">
         {t('byContinuing')}{' '}
-        <Link href="#" className="text-primary hover:underline">
+        <Link href="/terms" className="text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded">
           {t('termsOfService')}
         </Link>{' '}
         and{' '}
-        <Link href="#" className="text-primary hover:underline">
+        <Link href="/privacy" className="text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded">
           {t('privacyPolicy')}
         </Link>
         .

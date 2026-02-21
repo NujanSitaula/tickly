@@ -18,7 +18,11 @@ type AuthContextValue = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, password_confirmation: string) => Promise<void>;
-  reactivateAccount: (email: string, password?: string, name?: string) => Promise<void>;
+  reactivateAccount: (
+    params:
+      | { email: string; password?: string; name?: string }
+      | { reactivate_token: string }
+  ) => Promise<void>;
   logout: () => Promise<void>;
   setToken: (token: string | null) => void;
   setUser: (user: User | null) => void;
@@ -56,8 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const reactivateAccount = useCallback(
-    async (email: string, password?: string, name?: string) => {
-      const res = await authApi.reactivateAccount({ email, password, name });
+    async (
+      params:
+        | { email: string; password?: string; name?: string }
+        | { reactivate_token: string }
+    ) => {
+      const res = await authApi.reactivateAccount(params);
       setToken(res.access_token);
       setUser(res.user);
     },

@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { auth as authApi } from '@/lib/api';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -11,7 +12,7 @@ function AuthCallbackContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = searchParams.get('token');
+    const code = searchParams.get('code');
     const errorParam = searchParams.get('error');
 
     if (errorParam) {
@@ -22,37 +23,25 @@ function AuthCallbackContent() {
       return;
     }
 
-    if (!token) {
-      setError('No token received');
+    if (!code) {
+      setError('No authorization code received');
       setTimeout(() => {
         router.push('/login');
       }, 2000);
       return;
     }
 
-    // Store token
-    setToken(token);
-
-    // Fetch user info
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
-    fetch(`${API_URL}/user`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
-    })
-      .then((res) => res.json())
+    // Exchange code for token (token never appears in URL)
+    authApi
+      .exchangeCode(code)
       .then((data) => {
-        if (data.user) {
-          setUser(data.user);
-          router.push('/');
-          router.refresh();
-        } else {
-          throw new Error('Failed to fetch user');
-        }
+        setToken(data.access_token);
+        setUser(data.user);
+        router.push('/');
+        router.refresh();
       })
       .catch((err) => {
-        console.error('Error fetching user:', err);
+        console.error('Error exchanging code:', err);
         setError('Failed to authenticate');
         setTimeout(() => {
           router.push('/login');

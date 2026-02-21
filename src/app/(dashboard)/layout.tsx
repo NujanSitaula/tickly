@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { Menu, Plus } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import AddTaskModal from '@/components/AddTaskModal';
+import FocusIndicatorsLoader from '@/components/FocusIndicatorsLoader';
 import { useIsLg } from '@/hooks/useMediaQuery';
 
 export default function DashboardLayout({
@@ -89,13 +90,15 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {!isLg && (
+    <>
+      <FocusIndicatorsLoader />
+      <div className="fixed inset-0 flex overflow-hidden bg-background">
+        {!isLg && (
         <header className="fixed top-0 left-0 right-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:hidden">
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="cursor-pointer flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
@@ -104,7 +107,7 @@ export default function DashboardLayout({
           <button
             type="button"
             onClick={() => setAddTaskOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="cursor-pointer flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             aria-label="Add task"
           >
             <Plus className="h-5 w-5" />
@@ -120,7 +123,7 @@ export default function DashboardLayout({
         mobileOpen={sidebarOpen}
         onMobileClose={() => setSidebarOpen(false)}
       />
-      <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">{children}</main>
+      <main id="main-content" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pt-14 lg:pt-0" tabIndex={-1}>{children}</main>
       <AddTaskModal
         open={addTaskOpen}
         onClose={() => setAddTaskOpen(false)}
@@ -130,6 +133,7 @@ export default function DashboardLayout({
           window.dispatchEvent(new CustomEvent('taskAdded', { detail: task }));
         }}
       />
-    </div>
+      </div>
+    </>
   );
 }

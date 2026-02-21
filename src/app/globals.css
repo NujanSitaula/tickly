@@ -142,19 +142,274 @@
   }
 }
 
+/* Green Color Scale - Light Mode */
+:root, .light, .light-theme {
+  --green-1: #fbfefb;
+  --green-2: #f3fcf3;
+  --green-3: #e9f9e9;
+  --green-4: #ddf3dc;
+  --green-5: #ccebcc;
+  --green-6: #b4dfb4;
+  --green-7: #92ce92;
+  --green-8: #5bb75b;
+  --green-9: #30a14e;
+  --green-10: #2b8f44;
+  --green-11: #26803a;
+  --green-12: #1e6b2f;
+
+  --green-contrast: #fff;
+  --green-surface: #f3fcf3cc;
+  --green-indicator: #30a14e;
+  --green-track: #30a14e;
+}
+
+/* Green Color Scale - Dark Mode */
+.dark, .dark-theme {
+  --green-1: #0d1912;
+  --green-2: #0f1e13;
+  --green-3: #132819;
+  --green-4: #16301d;
+  --green-5: #193921;
+  --green-6: #1d4426;
+  --green-7: #245530;
+  --green-8: #2f6e3b;
+  --green-9: #46a758;
+  --green-10: #55b467;
+  --green-11: #63c174;
+  --green-12: #7ee08a;
+
+  --green-contrast: #fff;
+  --green-surface: #13281980;
+  --green-indicator: #46a758;
+  --green-track: #46a758;
+}
+
+/* Purple Color Scale - Light Mode */
+:root, .light, .light-theme {
+  --purple-1: #fefcfe;
+  --purple-2: #faf5ff;
+  --purple-3: #f3e8fe;
+  --purple-4: #eadbfe;
+  --purple-5: #e0ccfd;
+  --purple-6: #d1b7fb;
+  --purple-7: #be9ef7;
+  --purple-8: #a78bfa;
+  --purple-9: #8b5cf6;
+  --purple-10: #7c3aed;
+  --purple-11: #6d28d9;
+  --purple-12: #5b21b6;
+
+  --purple-contrast: #fff;
+  --purple-surface: #faf5ffcc;
+  --purple-indicator: #8b5cf6;
+  --purple-track: #8b5cf6;
+}
+
+/* Purple Color Scale - Dark Mode */
+.dark, .dark-theme {
+  --purple-1: #18151b;
+  --purple-2: #1e1b24;
+  --purple-3: #2e2438;
+  --purple-4: #3b2f4a;
+  --purple-5: #46395e;
+  --purple-6: #544470;
+  --purple-7: #655181;
+  --purple-8: #7c6a9a;
+  --purple-9: #a78bfa;
+  --purple-10: #b794f6;
+  --purple-11: #c4a8ff;
+  --purple-12: #e9d5ff;
+
+  --purple-contrast: #fff;
+  --purple-surface: #2e243880;
+  --purple-indicator: #a78bfa;
+  --purple-track: #a78bfa;
+}
+
+/* Red Color Scale - Light Mode */
+:root, .light, .light-theme {
+  --red-1: #fffcfc;
+  --red-2: #fff8f8;
+  --red-3: #ffefef;
+  --red-4: #ffe5e5;
+  --red-5: #fdd8d8;
+  --red-6: #f9c6c6;
+  --red-7: #f3aeaf;
+  --red-8: #eb9091;
+  --red-9: #e5484d;
+  --red-10: #dc3d43;
+  --red-11: #cd2b31;
+  --red-12: #381316;
+
+  --red-contrast: #fff;
+  --red-surface: #fff8f8cc;
+  --red-indicator: #e5484d;
+  --red-track: #e5484d;
+}
+
+/* Red Color Scale - Dark Mode */
+.dark, .dark-theme {
+  --red-1: #191111;
+  --red-2: #201314;
+  --red-3: #3b1219;
+  --red-4: #500f1c;
+  --red-5: #611623;
+  --red-6: #72232d;
+  --red-7: #8c333a;
+  --red-8: #b5454e;
+  --red-9: #e5484d;
+  --red-10: #ec5e62;
+  --red-11: #f16b6e;
+  --red-12: #fda2a5;
+
+  --red-contrast: #fff;
+  --red-surface: #3b121980;
+  --red-indicator: #e5484d;
+  --red-track: #e5484d;
+}
+
+/* Orange Color Scale - Light Mode */
+:root, .light, .light-theme {
+  --orange-1: #fefcfb;
+  --orange-2: #fff8f3;
+  --orange-3: #ffefdc;
+  --orange-4: #ffe4c7;
+  --orange-5: #ffd6ad;
+  --orange-6: #ffc491;
+  --orange-7: #ffae6b;
+  --orange-8: #ff9232;
+  --orange-9: #f76808;
+  --orange-10: #e85d00;
+  --orange-11: #c14c00;
+  --orange-12: #5c2609;
+
+  --orange-contrast: #fff;
+  --orange-surface: #fff8f3cc;
+  --orange-indicator: #f76808;
+  --orange-track: #f76808;
+}
+
+/* Orange Color Scale - Dark Mode */
+.dark, .dark-theme {
+  --orange-1: #1f1206;
+  --orange-2: #2b1410;
+  --orange-3: #391a03;
+  --orange-4: #441f04;
+  --orange-5: #4f2305;
+  --orange-6: #5f2a06;
+  --orange-7: #763205;
+  --orange-8: #943e00;
+  --orange-9: #f76808;
+  --orange-10: #ff802b;
+  --orange-11: #ff8b3e;
+  --orange-12: #ffb088;
+
+  --orange-contrast: #fff;
+  --orange-surface: #391a0380;
+  --orange-indicator: #f76808;
+  --orange-track: #f76808;
+}
+
+/* Active color scheme - accent only. Primary UI stays neutral blue. */
+:root {
+  /* Primary always blue (neutral base for buttons, selected states) */
+  --active-primary: var(--blue-9);
+  --active-primary-contrast: var(--blue-contrast);
+  --active-secondary: var(--blue-3);
+  --active-secondary-foreground: var(--blue-12);
+  /* Accent uses chosen scheme - links, focus rings, subtle highlights */
+  --active-accent: var(--blue-4);
+  --active-accent-foreground: var(--blue-12);
+  --active-muted: var(--blue-2);
+  --active-muted-foreground: var(--blue-11);
+  --active-border: var(--blue-5);
+  --active-input: var(--blue-5);
+  --active-ring: var(--blue-9);
+}
+
+.blue-theme {
+  --active-primary: var(--blue-9);
+  --active-primary-contrast: var(--blue-contrast);
+  --active-secondary: var(--blue-3);
+  --active-secondary-foreground: var(--blue-12);
+  --active-accent: var(--blue-4);
+  --active-accent-foreground: var(--blue-12);
+  --active-muted: var(--blue-2);
+  --active-muted-foreground: var(--blue-11);
+  --active-border: var(--blue-5);
+  --active-input: var(--blue-5);
+  --active-ring: var(--blue-9);
+}
+
+.green-theme {
+  --active-primary: var(--blue-9);
+  --active-primary-contrast: var(--blue-contrast);
+  --active-secondary: var(--blue-3);
+  --active-secondary-foreground: var(--blue-12);
+  --active-accent: var(--green-6);
+  --active-accent-foreground: var(--green-12);
+  --active-muted: var(--blue-2);
+  --active-muted-foreground: var(--blue-11);
+  --active-border: var(--blue-5);
+  --active-input: var(--blue-5);
+  --active-ring: var(--green-8);
+}
+
+.purple-theme {
+  --active-primary: var(--blue-9);
+  --active-primary-contrast: var(--blue-contrast);
+  --active-secondary: var(--blue-3);
+  --active-secondary-foreground: var(--blue-12);
+  --active-accent: var(--purple-6);
+  --active-accent-foreground: var(--purple-12);
+  --active-muted: var(--blue-2);
+  --active-muted-foreground: var(--blue-11);
+  --active-border: var(--blue-5);
+  --active-input: var(--blue-5);
+  --active-ring: var(--purple-8);
+}
+
+.red-theme {
+  --active-primary: var(--blue-9);
+  --active-primary-contrast: var(--blue-contrast);
+  --active-secondary: var(--blue-3);
+  --active-secondary-foreground: var(--blue-12);
+  --active-accent: var(--red-6);
+  --active-accent-foreground: var(--red-12);
+  --active-muted: var(--blue-2);
+  --active-muted-foreground: var(--blue-11);
+  --active-border: var(--blue-5);
+  --active-input: var(--blue-5);
+  --active-ring: var(--red-8);
+}
+
+.orange-theme {
+  --active-primary: var(--blue-9);
+  --active-primary-contrast: var(--blue-contrast);
+  --active-secondary: var(--blue-3);
+  --active-secondary-foreground: var(--blue-12);
+  --active-accent: var(--orange-6);
+  --active-accent-foreground: var(--orange-12);
+  --active-muted: var(--blue-2);
+  --active-muted-foreground: var(--blue-11);
+  --active-border: var(--blue-5);
+  --active-input: var(--blue-5);
+  --active-ring: var(--orange-8);
+}
+
 /* Shadcn UI Semantic Variables - Light Mode */
 :root, .light, .light-theme {
   --background: #ffffff;
   --foreground: #171717;
 
-  --primary: var(--blue-9);
-  --primary-foreground: var(--blue-contrast);
+  --primary: var(--active-primary);
+  --primary-foreground: var(--active-primary-contrast);
 
-  --secondary: var(--blue-3);
-  --secondary-foreground: var(--blue-12);
+  --secondary: var(--active-secondary);
+  --secondary-foreground: var(--active-secondary-foreground);
 
-  --accent: var(--blue-4);
-  --accent-foreground: var(--blue-12);
+  --accent: var(--active-accent);
+  --accent-foreground: var(--active-accent-foreground);
 
   --card: var(--background);
   --card-foreground: var(--foreground);
@@ -162,12 +417,12 @@
   --popover: var(--background);
   --popover-foreground: var(--foreground);
 
-  --muted: var(--blue-2);
-  --muted-foreground: var(--blue-11);
+  --muted: var(--active-muted);
+  --muted-foreground: var(--active-muted-foreground);
 
-  --border: var(--blue-5);
-  --input: var(--blue-5);
-  --ring: var(--blue-9);
+  --border: var(--active-border);
+  --input: var(--active-input);
+  --ring: var(--active-ring);
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
@@ -178,8 +433,8 @@
   --background: #0f172a;
   --foreground: #f1f5f9;
 
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
+  --primary: var(--active-primary);
+  --primary-foreground: var(--active-primary-contrast);
 
   --secondary: #334155;
   --secondary-foreground: #f1f5f9;
@@ -198,7 +453,7 @@
 
   --border: #475569;
   --input: #475569;
-  --ring: #3b82f6;
+  --ring: var(--active-ring);
 
   --destructive: #f87171;
   --destructive-foreground: #ffffff;
@@ -229,14 +484,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Media Query Fallback for Dark Mode (match .dark theme) */
+/* Media Query Fallback for Dark Mode (match .dark theme) - uses active scheme */
 @media (prefers-color-scheme: dark) {
   :root:not(.light):not(.light-theme) {
     --background: #0f172a;
     --foreground: #f1f5f9;
 
-    --primary: #3b82f6;
-    --primary-foreground: #ffffff;
+    --primary: var(--active-primary);
+    --primary-foreground: var(--active-primary-contrast);
 
     --secondary: #334155;
     --secondary-foreground: #f1f5f9;
@@ -255,15 +510,121 @@
 
     --border: #475569;
     --input: #475569;
-    --ring: #3b82f6;
+    --ring: var(--active-ring);
 
     --destructive: #f87171;
     --destructive-foreground: #ffffff;
   }
 }
 
+/* Skip link: visually hidden until focused (WCAG 2.4.1) */
+.skip-link {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Screen-reader only: visible to assistive tech, hidden visually */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 body {
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Remove focus styles on mouse clicks - clean UI */
+*:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Keep input border subtle on mouse clicks - no rings */
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+select:focus:not(:focus-visible) {
+  border-color: var(--input) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Subtle keyboard focus indicator - thin, elegant outline */
+:focus-visible {
+  outline: 1px solid var(--ring);
+  outline-offset: 1px;
+}
+
+/* Input border change on keyboard focus - subtle */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: var(--ring);
+  outline: none;
+}
+
+/* Completely disable ALL focus indicators when user preference is off */
+.no-focus-indicators :focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+}
+
+.no-focus-indicators input:focus-visible,
+.no-focus-indicators textarea:focus-visible,
+.no-focus-indicators select:focus-visible {
+  border-color: var(--input) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Presence avatar pop-in animation */
+@keyframes avatar-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-avatar-pop {
+  animation: avatar-pop 0.35s ease-out both;
+}
+
+/* SweetAlert-style save indicator: circle stroke then check */
+@keyframes circle-tick {
+  0% {
+    stroke-dashoffset: 88;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+.animate-circle-tick {
+  animation: circle-tick 0.6s ease-out both;
+}
+.animate-circle-tick-loop {
+  animation: circle-tick 0.8s ease-in-out infinite;
 }

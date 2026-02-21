@@ -329,7 +329,7 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
                     setShowAddInput(false);
                     setNewTaskTitle('');
                   }}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="cursor-pointer text-muted-foreground hover:text-foreground"
                 >
                   <Circle className="h-5 w-5" />
                 </button>
@@ -349,7 +349,7 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
                 <button
                   type="submit"
                   disabled={addingTask || !newTaskTitle.trim()}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -358,7 +358,7 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
               <button
                 data-add-task
                 onClick={() => setShowAddInput(true)}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className="cursor-pointer flex w-full items-center gap-2 rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <Plus className="h-5 w-5" />
                 <span>{tCommon('addTask')}</span>

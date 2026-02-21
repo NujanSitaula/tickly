@@ -57,7 +57,7 @@ export default function RegisterPage() {
     setError('');
     setReactivating(true);
     try {
-      await reactivateAccount(email, password, name);
+      await reactivateAccount({ email, password, name });
       router.push('/');
       router.refresh();
     } catch (err) {
@@ -104,7 +104,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={handleReactivateCancel}
-              className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+              className="cursor-pointer flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
             >
               {t('reactivateCancel')}
             </button>
@@ -112,7 +112,7 @@ export default function RegisterPage() {
               type="button"
               onClick={handleReactivateConfirm}
               disabled={reactivating}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {reactivating ? t('creatingAccount') : t('reactivateConfirm')}
             </button>
@@ -163,7 +163,7 @@ export default function RegisterPage() {
       <button
         type="button"
         onClick={handleGoogleLogin}
-        className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        className="cursor-pointer flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <svg className="h-5 w-5" viewBox="0 0 24 24">
           <path
@@ -215,7 +215,7 @@ export default function RegisterPage() {
             onChange={(e) => setName(e.target.value)}
             required
             placeholder={t('name')}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
         </div>
 
@@ -230,7 +230,7 @@ export default function RegisterPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="you@example.com"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
         </div>
 
@@ -247,12 +247,12 @@ export default function RegisterPage() {
               required
               minLength={8}
               placeholder={t('password')}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+              className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
@@ -277,12 +277,12 @@ export default function RegisterPage() {
               required
               minLength={8}
               placeholder={t('confirmPassword')}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+              className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
               aria-label={showPasswordConfirmation ? 'Hide password' : 'Show password'}
             >
               {showPasswordConfirmation ? (
@@ -297,7 +297,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="cursor-pointer w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? t('creatingAccount') : t('signUp')}
         </button>
@@ -306,11 +306,11 @@ export default function RegisterPage() {
       {/* Terms and Privacy */}
       <p className="text-xs text-muted-foreground">
         {t('byContinuing')}{' '}
-        <Link href="#" className="text-primary hover:underline">
+        <Link href="/terms" className="text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded">
           {t('termsOfService')}
         </Link>{' '}
         and{' '}
-        <Link href="#" className="text-primary hover:underline">
+        <Link href="/privacy" className="text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded">
           {t('privacyPolicy')}
         </Link>
         .

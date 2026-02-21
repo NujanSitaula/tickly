@@ -7,6 +7,7 @@ import { tasks as tasksApi, type Task } from '@/lib/api';
 import { useViewPreference } from '@/hooks/useViewPreference';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function UpcomingPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -15,6 +16,8 @@ export default function UpcomingPage() {
   const hasLoadedOnce = useRef(false);
   const [view, setView] = useViewPreference('upcoming');
   const tDashboard = useTranslations('dashboard');
+  const { user } = useAuth();
+  const mode = user?.mode ?? 'advanced';
 
   const loadTasks = useCallback(async () => {
     setRefreshing(true);
@@ -74,7 +77,7 @@ export default function UpcomingPage() {
               )}
             </div>
           </div>
-          <ViewSwitcher view={view} onViewChange={setView} />
+          {mode !== 'basic' && <ViewSwitcher view={view} onViewChange={setView} />}
         </div>
       </div>
 
@@ -85,7 +88,7 @@ export default function UpcomingPage() {
             <p className="mt-4 text-sm text-muted-foreground">{tDashboard('common.loadingTasks')}</p>
           </div>
         ) : (
-          <TaskList tasks={tasks} onTaskUpdate={loadTasks} view={view} />
+          <TaskList tasks={tasks} onTaskUpdate={loadTasks} view={mode === 'basic' ? 'list' : view} />
         )}
       </div>
     </div>

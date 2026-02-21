@@ -124,7 +124,7 @@ export default function CompletedPage() {
                   <button
                     type="button"
                     onClick={() => setDateFilter('')}
-                    className="ml-2 text-xs text-muted-foreground hover:text-foreground"
+                    className="cursor-pointer ml-2 text-xs text-muted-foreground hover:text-foreground"
                   >
                     {tDashboard('common.clear')}
                   </button>
