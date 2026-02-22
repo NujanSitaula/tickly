@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { comments as commentsApi, type Comment, type Task } from '@/lib/api';
+import { comments as commentsApi, tasks as tasksApi, type Comment, type Task } from '@/lib/api';
 import type { ViewMode } from '@/hooks/useViewPreference';
+import { useTaskStoreOptional } from '@/contexts/TaskStoreContext';
 import { websocket, type WebSocketEvent } from '@/lib/websocket';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
@@ -11,11 +12,13 @@ import CalendarView from './CalendarView';
 interface TaskListProps {
   tasks: Task[];
   projectId?: number;
-  onTaskUpdate: () => void;
+  /** Optional: no longer used for refetch; mutations update the store. Kept for backwards compatibility. */
+  onTaskUpdate?: () => void;
   view: ViewMode;
 }
 
 export default function TaskList({ tasks, projectId, onTaskUpdate, view }: TaskListProps) {
+  const taskStore = useTaskStoreOptional();
   const [commentsByTaskId, setCommentsByTaskId] = useState<Record<number, Comment[]>>({});
   const commentsRef = useRef(commentsByTaskId);
   const refreshTimer = useRef<number | null>(null);
@@ -25,7 +28,7 @@ export default function TaskList({ tasks, projectId, onTaskUpdate, view }: TaskL
   }, [commentsByTaskId]);
 
   const requestRefresh = useCallback(() => {
-    if (refreshTimer.current != null) return;
+    if (refreshTimer.current != null || !onTaskUpdate) return;
     refreshTimer.current = window.setTimeout(() => {
       refreshTimer.current = null;
       onTaskUpdate();
@@ -91,41 +94,48 @@ export default function TaskList({ tasks, projectId, onTaskUpdate, view }: TaskL
     };
   }, [tasks]);
 
-  // Coalesce realtime refreshes (reorder can emit many events)
+  // Realtime: on task.updated fetch single task and update store; on comment events refresh comments only
   useEffect(() => {
-    const handler = (data: WebSocketEvent['data']) => {
+    const taskUpdatedHandler = async (data: WebSocketEvent['data']) => {
+      if (!taskStore || !('task_id' in data) || typeof data.task_id !== 'number') return;
+      try {
+        const res = await tasksApi.get(data.task_id);
+        taskStore.replaceTask(res.data);
+      } catch {
+        // ignore
+      }
+    };
+    const commentOrSubtaskHandler = (data: WebSocketEvent['data']) => {
       if ('task_id' in data && typeof data.task_id === 'number') {
-        // comment/subtask events include task_id; only comments need refetch here
         if ('comment' in data || 'comment_id' in data) {
           refreshCommentsForTask(data.task_id);
         }
       }
-      requestRefresh();
     };
 
-    websocket.on('task.updated', handler);
-    websocket.on('subtask.created', handler);
-    websocket.on('subtask.updated', handler);
-    websocket.on('subtask.deleted', handler);
-    websocket.on('comment.created', handler);
-    websocket.on('comment.updated', handler);
-    websocket.on('comment.deleted', handler);
+    websocket.on('task.updated', taskUpdatedHandler);
+    websocket.on('subtask.created', commentOrSubtaskHandler);
+    websocket.on('subtask.updated', commentOrSubtaskHandler);
+    websocket.on('subtask.deleted', commentOrSubtaskHandler);
+    websocket.on('comment.created', commentOrSubtaskHandler);
+    websocket.on('comment.updated', commentOrSubtaskHandler);
+    websocket.on('comment.deleted', commentOrSubtaskHandler);
 
     return () => {
-      websocket.off('task.updated', handler);
-      websocket.off('subtask.created', handler);
-      websocket.off('subtask.updated', handler);
-      websocket.off('subtask.deleted', handler);
-      websocket.off('comment.created', handler);
-      websocket.off('comment.updated', handler);
-      websocket.off('comment.deleted', handler);
+      websocket.off('task.updated', taskUpdatedHandler);
+      websocket.off('subtask.created', commentOrSubtaskHandler);
+      websocket.off('subtask.updated', commentOrSubtaskHandler);
+      websocket.off('subtask.deleted', commentOrSubtaskHandler);
+      websocket.off('comment.created', commentOrSubtaskHandler);
+      websocket.off('comment.updated', commentOrSubtaskHandler);
+      websocket.off('comment.deleted', commentOrSubtaskHandler);
 
       if (refreshTimer.current != null) {
         window.clearTimeout(refreshTimer.current);
         refreshTimer.current = null;
       }
     };
-  }, [requestRefresh, refreshCommentsForTask]);
+  }, [taskStore, refreshCommentsForTask]);
 
   // Render the appropriate view component
   if (view === 'kanban') {

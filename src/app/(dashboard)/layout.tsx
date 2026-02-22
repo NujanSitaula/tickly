@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { TaskStoreProvider, useTaskStoreOptional } from '@/contexts/TaskStoreContext';
 import { projects as projectsApi, type Project } from '@/lib/api';
 import { websocket } from '@/lib/websocket';
 import { useRouter } from 'next/navigation';
@@ -90,6 +91,50 @@ export default function DashboardLayout({
   }
 
   return (
+    <TaskStoreProvider>
+      <DashboardContent
+        isLg={isLg}
+        projects={projects}
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        addTaskOpen={addTaskOpen}
+        setAddTaskOpen={setAddTaskOpen}
+        loadProjects={loadProjects}
+      >
+        {children}
+      </DashboardContent>
+    </TaskStoreProvider>
+  );
+}
+
+function DashboardContent({
+  isLg,
+  projects,
+  sidebarCollapsed,
+  setSidebarCollapsed,
+  sidebarOpen,
+  setSidebarOpen,
+  addTaskOpen,
+  setAddTaskOpen,
+  loadProjects,
+  children,
+}: {
+  isLg: boolean;
+  projects: Project[];
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (v: boolean) => void;
+  sidebarOpen: boolean;
+  setSidebarOpen: (v: boolean) => void;
+  addTaskOpen: boolean;
+  setAddTaskOpen: (v: boolean) => void;
+  loadProjects: () => void;
+  children: React.ReactNode;
+}) {
+  const taskStore = useTaskStoreOptional();
+
+  return (
     <>
       <FocusIndicatorsLoader />
       <div className="fixed inset-0 flex overflow-hidden bg-background">
@@ -129,7 +174,7 @@ export default function DashboardLayout({
         onClose={() => setAddTaskOpen(false)}
         onTaskAdded={(task) => {
           loadProjects();
-          // Notify children to refresh with the created task data
+          if (task) taskStore?.addTask(task);
           window.dispatchEvent(new CustomEvent('taskAdded', { detail: task }));
         }}
       />

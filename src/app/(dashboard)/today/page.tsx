@@ -1,73 +1,39 @@
 'use client';
 
-import { tasks as tasksApi, type Task } from '@/lib/api';
+import { tasks as tasksApi } from '@/lib/api';
 import { Calendar } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import TaskList from '@/components/TaskList';
 import ViewSwitcher from '@/components/ViewSwitcher';
 import { useViewPreference } from '@/hooks/useViewPreference';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTaskStore } from '@/contexts/TaskStoreContext';
 
 export default function TodayPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const hasLoadedOnce = useRef(false);
+  const { loadTasksForView, getTasks, loading } = useTaskStore();
   const [view, setView] = useViewPreference('today');
   const tDashboard = useTranslations('dashboard');
   const locale = useLocale();
-   const { user } = useAuth();
+  const { user } = useAuth();
   const mode = user?.mode ?? 'advanced';
 
-  const loadTasks = useCallback(async () => {
-    setRefreshing(true);
-    if (!hasLoadedOnce.current) {
-      setLoading(true);
+  const fetchToday = useCallback(async () => {
+    const res = await tasksApi.list();
+    if (mode === 'basic') {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      return res.data.filter(
+        (t) => t.due_date && t.due_date.slice(0, 10) === todayKey
+      );
     }
-    try {
-      const res = await tasksApi.list();
-      if (mode === 'basic') {
-        const todayKey = new Date().toISOString().slice(0, 10);
-        setTasks(
-          res.data.filter(
-            (t) => t.due_date && t.due_date.slice(0, 10) === todayKey
-          )
-        );
-      } else {
-        setTasks(res.data);
-      }
-      hasLoadedOnce.current = true;
-    } catch (error) {
-      console.error('Failed to load tasks:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    return res.data;
   }, [mode]);
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    loadTasksForView('today', fetchToday);
+  }, [loadTasksForView, fetchToday]);
 
-  // Listen for task added event from modal
-  useEffect(() => {
-    function handleTaskAdded(e: Event) {
-      const customEvent = e as CustomEvent<import('@/lib/api').Task | undefined>;
-      const newTask = customEvent.detail;
-      
-      // If we have the task data and it matches our filter, add it optimistically
-      if (newTask) {
-        // Today page shows all tasks, so we can add it optimistically
-        setTasks((prev) => [newTask, ...prev]);
-      } else {
-        // Fallback to refetch if no task data
-        loadTasks();
-      }
-    }
-    window.addEventListener('taskAdded', handleTaskAdded);
-    return () => window.removeEventListener('taskAdded', handleTaskAdded);
-  }, [loadTasks]);
+  const tasks = getTasks();
 
   const today = new Date();
   const todayFormatted = today.toLocaleDateString(locale, {
@@ -85,7 +51,7 @@ export default function TodayPage() {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-semibold text-foreground">{tDashboard('today.title')}</h1>
-                {refreshing && !loading && (
+                {loading && (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-muted-foreground/40 border-r-transparent" />
                 )}
               </div>
@@ -103,7 +69,7 @@ export default function TodayPage() {
             <p className="mt-4 text-sm text-muted-foreground">{tDashboard('common.loadingTasks')}</p>
           </div>
         ) : (
-          <TaskList tasks={tasks} onTaskUpdate={loadTasks} view={mode === 'basic' ? 'list' : view} />
+          <TaskList tasks={tasks} view={mode === 'basic' ? 'list' : view} />
         )}
       </div>
     </div>

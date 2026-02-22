@@ -3,35 +3,28 @@
 import { Calendar, CheckCircle2, Search } from 'lucide-react';
 import TaskItem from '@/components/TaskItem';
 import TaskDetailModal from '@/components/TaskDetailModal';
-import { tasks as tasksApi, type Task } from '@/lib/api';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { tasks as tasksApi } from '@/lib/api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useTaskStore } from '@/contexts/TaskStoreContext';
+import type { Task } from '@/lib/api';
 
 export default function CompletedPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const hasLoadedOnce = useRef(false);
+  const { loadTasksForView, getTasks, loading, updateTask, rollbackTask } = useTaskStore();
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [dateFilter, setDateFilter] = useState<string>('');
   const tDashboard = useTranslations('dashboard');
 
-  const loadTasks = useCallback(async () => {
-    setRefreshing(true);
-    if (!hasLoadedOnce.current) {
-      setLoading(true);
-    }
-    try {
-      const res = await tasksApi.list({ completed: true });
-      setTasks(res.data);
-      hasLoadedOnce.current = true;
-    } catch (error) {
-      console.error('Failed to load tasks:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const fetchCompleted = useCallback(
+    () => tasksApi.list({ completed: true }).then((r) => r.data),
+    []
+  );
+
+  useEffect(() => {
+    loadTasksForView('completed', fetchCompleted);
+  }, [loadTasksForView, fetchCompleted]);
+
+  const tasks = getTasks();
 
   const groupedTasks = useMemo(() => {
     const byDate: Record<string, Task[]> = {};
@@ -47,7 +40,6 @@ export default function CompletedPage() {
       byDate[dateKey].push(task);
     }
 
-    // Sort tasks in each group by completed_at desc, fallback to order
     Object.keys(byDate).forEach((key) => {
       byDate[key].sort((a, b) => {
         const aTime = a.completed_at ? Date.parse(a.completed_at) : 0;
@@ -57,7 +49,6 @@ export default function CompletedPage() {
       });
     });
 
-    // Sort dates descending (newest first)
     const sortedKeys = Object.keys(byDate).sort((a, b) => (a < b ? 1 : -1));
 
     return { byDate, sortedKeys };
@@ -83,19 +74,19 @@ export default function CompletedPage() {
     });
   };
 
-  useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
-
-  // Listen for task added event from modal (completed tasks won't appear here, but refresh anyway)
-  useEffect(() => {
-    function handleTaskAdded() {
-      // New tasks aren't completed, so just refresh to be safe
-      loadTasks();
-    }
-    window.addEventListener('taskAdded', handleTaskAdded);
-    return () => window.removeEventListener('taskAdded', handleTaskAdded);
-  }, [loadTasks]);
+  const handleToggle = useCallback(
+    async (task: Task) => {
+      const previous = { ...task };
+      updateTask(task.id, { completed: false });
+      try {
+        await tasksApi.update(task.id, { completed: false });
+      } catch (error) {
+        console.error('Failed to toggle task:', error);
+        rollbackTask(previous);
+      }
+    },
+    [updateTask, rollbackTask]
+  );
 
   return (
     <div className="h-full">
@@ -105,14 +96,14 @@ export default function CompletedPage() {
             <CheckCircle2 className="h-6 w-6 text-primary" />
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold text-foreground">{tDashboard('completed.title')}</h1>
-              {refreshing && !loading && (
+              {loading && (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-muted-foreground/40 border-r-transparent" />
               )}
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <div className="relative flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
                 <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="date"
@@ -167,16 +158,8 @@ export default function CompletedPage() {
                         key={task.id}
                         task={task}
                         onClick={() => setSelectedTaskId(task.id)}
-                        onToggle={async () => {
-                          // Marking as incomplete removes it from Completed
-                          try {
-                            await tasksApi.update(task.id, { completed: !task.completed });
-                            await loadTasks();
-                          } catch (error) {
-                            console.error('Failed to toggle task:', error);
-                          }
-                        }}
-                        onUpdate={loadTasks}
+                        onToggle={() => handleToggle(task)}
+                        onUpdate={() => {}}
                         showDivider={index !== dateTasks.length - 1}
                       />
                     ))}
@@ -189,7 +172,7 @@ export default function CompletedPage() {
               open={selectedTaskId != null}
               taskId={selectedTaskId}
               onClose={() => setSelectedTaskId(null)}
-              onTaskUpdate={loadTasks}
+              onTaskUpdate={undefined}
             />
           </>
         )}

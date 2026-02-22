@@ -1,7 +1,7 @@
 'use client';
 
 import { Circle, Plus } from 'lucide-react';
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   type CollisionDetection,
   DndContext,
@@ -23,6 +23,7 @@ import {
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { tasks as tasksApi, type Task } from '@/lib/api';
+import { useTaskStoreOptional } from '@/contexts/TaskStoreContext';
 import TaskItem from './TaskItem';
 import TaskDetailModal from './TaskDetailModal';
 import { useTranslations } from 'next-intl';
@@ -30,7 +31,8 @@ import { useTranslations } from 'next-intl';
 interface ListViewProps {
   tasks: Task[];
   projectId?: number;
-  onTaskUpdate: () => void;
+  /** Optional: mutations update the store; no refetch. */
+  onTaskUpdate?: () => void;
 }
 
 function SortableTaskRow({
@@ -95,22 +97,39 @@ function StatusDropZone({
   );
 }
 
+type ColumnsMap = Record<'todo' | 'in_progress' | 'done', Task[]>;
+
+function buildColumnsFromTasks(tasks: Task[]): ColumnsMap {
+  const sorted = [...tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const next: ColumnsMap = {
+    todo: [],
+    in_progress: [],
+    done: [],
+  };
+  for (const task of sorted) {
+    const status = (task.status as 'todo' | 'in_progress' | 'done') || 'todo';
+    next[status].push(task);
+  }
+  return next;
+}
+
 export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewProps) {
+  const taskStore = useTaskStoreOptional();
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [addingTask, setAddingTask] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
-  const [columns, setColumns] = useState<Record<'todo' | 'in_progress' | 'done', Task[]>>({
-    todo: [],
-    in_progress: [],
-    done: [],
-  });
+  const [draggingColumns, setDraggingColumns] = useState<ColumnsMap | null>(null);
   const tCommon = useTranslations('dashboard.common');
+
+  const columnsFromStore = useMemo(() => buildColumnsFromTasks(tasks), [tasks]);
+  const columns = draggingColumns ?? columnsFromStore;
 
   const columnsRef = useRef(columns);
   const lastOverId = useRef<UniqueIdentifier | null>(null);
-  const clonedColumns = useRef<typeof columns | null>(null);
+  const clonedColumns = useRef<ColumnsMap | null>(null);
+  columnsRef.current = columns;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -123,10 +142,10 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
     if (!newTaskTitle.trim() || !projectId) return;
     setAddingTask(true);
     try {
-      await tasksApi.create(projectId, newTaskTitle.trim());
+      const res = await tasksApi.create(projectId, newTaskTitle.trim());
       setNewTaskTitle('');
       setShowAddInput(false);
-      onTaskUpdate();
+      taskStore?.addTask(res.data);
     } catch (error) {
       console.error('Failed to add task:', error);
     } finally {
@@ -135,35 +154,17 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
   }
 
   async function handleToggleTask(task: Task) {
+    const previous = { ...task };
+    const isDone = task.completed || task.status === 'done';
+    const nextDone = !isDone;
+    taskStore?.updateTask(task.id, { completed: nextDone, status: nextDone ? 'done' : 'todo' });
     try {
-      const isDone = task.completed || task.status === 'done';
-      const nextDone = !isDone;
       await tasksApi.update(task.id, { completed: nextDone, status: nextDone ? 'done' : 'todo' });
-      onTaskUpdate();
     } catch (error) {
       console.error('Failed to update task:', error);
+      taskStore?.rollbackTask(previous);
     }
   }
-
-  useEffect(() => {
-    const sorted = [...tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    const next = {
-      todo: [] as Task[],
-      in_progress: [] as Task[],
-      done: [] as Task[],
-    };
-
-    for (const task of sorted) {
-      const status = (task.status as 'todo' | 'in_progress' | 'done') || 'todo';
-      next[status].push(task);
-    }
-
-    setColumns(next);
-  }, [tasks]);
-
-  useEffect(() => {
-    columnsRef.current = columns;
-  }, [columns]);
 
   const allTasks = useMemo(() => [...columns.todo, ...columns.in_progress, ...columns.done], [columns]);
 
@@ -177,7 +178,7 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
     STATUS_VALUES.includes(id as any);
 
   const findContainer = useCallback(
-    (cols: typeof columns, id: UniqueIdentifier) => {
+    (cols: ColumnsMap, id: UniqueIdentifier) => {
       if (isStatus(id)) return id;
       for (const s of STATUS_VALUES) {
         if (cols[s].some((t) => t.id === id)) return s;
@@ -221,6 +222,11 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
 
   function handleDragStart(event: DragStartEvent) {
     setActiveTaskId(event.active.id as number);
+    setDraggingColumns({
+      todo: [...columnsRef.current.todo],
+      in_progress: [...columnsRef.current.in_progress],
+      done: [...columnsRef.current.done],
+    });
     clonedColumns.current = {
       todo: [...columnsRef.current.todo],
       in_progress: [...columnsRef.current.in_progress],
@@ -235,7 +241,8 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
     const activeId = active.id;
     const overId = over.id;
 
-    setColumns((prev) => {
+    setDraggingColumns((prev) => {
+      if (!prev) return prev;
       const activeContainer = findContainer(prev, activeId);
       const overContainer = findContainer(prev, overId);
       if (!activeContainer || !overContainer) return prev;
@@ -269,7 +276,7 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
 
   function handleDragCancel(_event: DragCancelEvent) {
     setActiveTaskId(null);
-    if (clonedColumns.current) setColumns(clonedColumns.current);
+    setDraggingColumns(null);
     clonedColumns.current = null;
     lastOverId.current = null;
   }
@@ -278,7 +285,9 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
     const { over } = event;
     setActiveTaskId(null);
     if (!over) {
-      handleDragCancel({} as DragCancelEvent);
+      setDraggingColumns(null);
+      clonedColumns.current = null;
+      lastOverId.current = null;
       return;
     }
 
@@ -291,6 +300,10 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
       return { ...t, status, completed: status === 'done', order: idx };
     });
 
+    const previousTasks = taskStore ? taskStore.getTasks() : [];
+    taskStore?.reorderTasks(ordered);
+    setDraggingColumns(null);
+
     const items = ordered.map((t) => ({
       id: t.id,
       status: (t.status as string) || 'todo',
@@ -299,10 +312,9 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
 
     try {
       await tasksApi.reorder(items);
-      window.setTimeout(() => startTransition(() => onTaskUpdate()), 250);
     } catch (error) {
       console.error('Failed to persist task reorder:', error);
-      onTaskUpdate();
+      if (previousTasks.length > 0) taskStore?.reorderTasks(previousTasks);
     }
   }
 
@@ -390,7 +402,7 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
                         task={task}
                         onClick={() => setSelectedTaskId(task.id)}
                         onToggle={() => handleToggleTask(task)}
-                        onUpdate={onTaskUpdate}
+                        onUpdate={onTaskUpdate ?? (() => {})}
                         showDivider={idx !== section.tasks.length - 1}
                       />
                     ))}
@@ -407,7 +419,7 @@ export default function ListView({ tasks, projectId, onTaskUpdate }: ListViewPro
                   task={activeTask}
                   onClick={() => {}}
                   onToggle={() => {}}
-                  onUpdate={onTaskUpdate}
+                  onUpdate={onTaskUpdate ?? (() => {})}
                   showDivider={false}
                 />
               </div>

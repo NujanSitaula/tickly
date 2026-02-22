@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   type CollisionDetection,
   DndContext,
@@ -28,6 +28,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { tasks as tasksApi, type Task } from '@/lib/api';
+import { useTaskStoreOptional } from '@/contexts/TaskStoreContext';
 import TaskCard from './TaskCard';
 import TaskDetailModal from './TaskDetailModal';
 import { useTranslations } from 'next-intl';
@@ -35,7 +36,8 @@ import { useTranslations } from 'next-intl';
 interface KanbanViewProps {
   tasks: Task[];
   projectId?: number;
-  onTaskUpdate: () => void;
+  /** Optional: mutations update the store; no refetch. */
+  onTaskUpdate?: () => void;
 }
 
 type Status = 'todo' | 'in_progress' | 'done';
@@ -145,8 +147,8 @@ function KanbanColumnDropZone({
 }
 
 export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanViewProps) {
-  const [tasksWithComments, setTasksWithComments] = useState<Task[]>(tasks);
-  const [columns, setColumns] = useState<ColumnMap>(() => buildColumns(tasks));
+  const taskStore = useTaskStoreOptional();
+  const [draggingColumns, setDraggingColumns] = useState<ColumnMap | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -154,13 +156,14 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
   const [showAddInput, setShowAddInput] = useState(false);
   const tCommon = useTranslations('dashboard.common');
 
+  const columnsFromStore = useMemo(() => buildColumns(tasks), [tasks]);
+  const columns = draggingColumns ?? columnsFromStore;
+
   const columnsRef = useRef(columns);
   const lastOverId = useRef<UniqueIdentifier | null>(null);
   const clonedColumns = useRef<ColumnMap | null>(null);
 
-  useEffect(() => {
-    columnsRef.current = columns;
-  }, [columns]);
+  columnsRef.current = columns;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -169,14 +172,6 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
       },
     })
   );
-
-  useEffect(() => {
-    setTasksWithComments(tasks);
-  }, [tasks]);
-
-  useEffect(() => {
-    setColumns(buildColumns(tasksWithComments));
-  }, [tasksWithComments]);
 
   const allColumnTasks = useMemo(
     () => [...columns.todo, ...columns.in_progress, ...columns.done],
@@ -233,10 +228,10 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
     if (!newTaskTitle.trim() || !projectId) return;
     setAddingTask(true);
     try {
-      await tasksApi.create(projectId, newTaskTitle.trim(), undefined, undefined, 'todo');
+      const res = await tasksApi.create(projectId, newTaskTitle.trim(), undefined, undefined, 'todo');
       setNewTaskTitle('');
       setShowAddInput(false);
-      onTaskUpdate();
+      taskStore?.addTask(res.data);
     } catch (error) {
       console.error('Failed to add task:', error);
     } finally {
@@ -245,23 +240,32 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
   }
 
   async function handleToggleTask(task: Task) {
+    const previous = { ...task };
+    const isDone = task.completed || task.status === 'done';
+    const nextDone = !isDone;
+    taskStore?.updateTask(task.id, {
+      completed: nextDone,
+      status: nextDone ? 'done' : 'todo',
+    });
     try {
-      const isDone = task.completed || task.status === 'done';
-      const nextDone = !isDone;
       await tasksApi.update(task.id, {
         completed: nextDone,
         status: nextDone ? 'done' : 'todo',
       });
-      onTaskUpdate();
     } catch (error) {
       console.error('Failed to update task:', error);
+      taskStore?.rollbackTask(previous);
     }
   }
 
   function handleDragStart(event: DragStartEvent) {
     const id = event.active.id as number;
     setActiveTaskId(id);
-
+    setDraggingColumns({
+      todo: [...columnsRef.current.todo],
+      in_progress: [...columnsRef.current.in_progress],
+      done: [...columnsRef.current.done],
+    });
     clonedColumns.current = {
       todo: [...columnsRef.current.todo],
       in_progress: [...columnsRef.current.in_progress],
@@ -276,7 +280,8 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
     const activeId = active.id;
     const overId = over.id;
 
-    setColumns((prev) => {
+    setDraggingColumns((prev) => {
+      if (!prev) return prev;
       const activeContainer = findContainerInColumns(prev, activeId);
       const overContainer = findContainerInColumns(prev, overId);
 
@@ -333,9 +338,7 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
 
   function handleDragCancel(_event: DragCancelEvent) {
     setActiveTaskId(null);
-    if (clonedColumns.current) {
-      setColumns(clonedColumns.current);
-    }
+    setDraggingColumns(null);
     clonedColumns.current = null;
     lastOverId.current = null;
   }
@@ -345,7 +348,9 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
     setActiveTaskId(null);
 
     if (!over) {
-      handleDragCancel({} as DragCancelEvent);
+      setDraggingColumns(null);
+      clonedColumns.current = null;
+      lastOverId.current = null;
       return;
     }
 
@@ -365,7 +370,9 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
       }
     );
 
-    setTasksWithComments(newTasks);
+    const previousTasks = taskStore ? taskStore.getTasks() : [];
+    taskStore?.reorderTasks(newTasks);
+    setDraggingColumns(null);
 
     const items = newTasks.map((task) => ({
       id: task.id,
@@ -375,12 +382,9 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
 
     try {
       await tasksApi.reorder(items);
-      // Let the drop animation finish before revalidating from server
-      window.setTimeout(() => {
-        startTransition(() => onTaskUpdate());
-      }, 250);
     } catch (error) {
       console.error('Failed to persist task reorder:', error);
+      if (previousTasks.length > 0) taskStore?.reorderTasks(previousTasks);
     }
   }
 
@@ -490,7 +494,7 @@ export default function KanbanView({ tasks, projectId, onTaskUpdate }: KanbanVie
         open={selectedTaskId !== null}
         taskId={selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
-        onTaskUpdate={onTaskUpdate}
+        onTaskUpdate={onTaskUpdate ?? undefined}
       />
     </>
   );

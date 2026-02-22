@@ -3,6 +3,7 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { tasks as tasksApi, type Task } from '@/lib/api';
+import { useTaskStoreOptional } from '@/contexts/TaskStoreContext';
 import TaskCard from './TaskCard';
 import TaskDetailModal from './TaskDetailModal';
 import { useTranslations } from 'next-intl';
@@ -10,10 +11,12 @@ import { useTranslations } from 'next-intl';
 interface CalendarViewProps {
   tasks: Task[];
   projectId?: number;
-  onTaskUpdate: () => void;
+  /** Optional: mutations update the store; no refetch. */
+  onTaskUpdate?: () => void;
 }
 
 export default function CalendarView({ tasks, projectId, onTaskUpdate }: CalendarViewProps) {
+  const taskStore = useTaskStoreOptional();
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -33,10 +36,10 @@ export default function CalendarView({ tasks, projectId, onTaskUpdate }: Calenda
     if (!newTaskTitle.trim() || !projectId) return;
     setAddingTask(true);
     try {
-      await tasksApi.create(projectId, newTaskTitle.trim());
+      const res = await tasksApi.create(projectId, newTaskTitle.trim());
       setNewTaskTitle('');
       setShowAddInput(false);
-      onTaskUpdate();
+      taskStore?.addTask(res.data);
     } catch (error) {
       console.error('Failed to add task:', error);
     } finally {
@@ -45,11 +48,13 @@ export default function CalendarView({ tasks, projectId, onTaskUpdate }: Calenda
   }
 
   async function handleToggleTask(task: Task) {
+    const previous = { ...task };
+    taskStore?.updateTask(task.id, { completed: !task.completed });
     try {
       await tasksApi.update(task.id, { completed: !task.completed });
-      onTaskUpdate();
     } catch (error) {
       console.error('Failed to update task:', error);
+      taskStore?.rollbackTask(previous);
     }
   }
 

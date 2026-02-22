@@ -25,6 +25,7 @@ import {
   type Subtask,
   type Task,
 } from '@/lib/api';
+import { useTaskStoreOptional } from '@/contexts/TaskStoreContext';
 import { websocket, type WebSocketEvent } from '@/lib/websocket';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -49,6 +50,7 @@ export default function TaskDetailModal({
   onTaskUpdate,
 }: TaskDetailModalProps) {
   const { user } = useAuth();
+  const taskStore = useTaskStoreOptional();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [task, setTask] = useState<Task | null>(null);
@@ -194,21 +196,21 @@ export default function TaskDetailModal({
     if (!task || saving) return;
     setSaving(true);
     try {
-      await tasksApi.update(task.id, {
+      const res = await tasksApi.update(task.id, {
         title,
         description: description || null,
         due_date: dueDate || null,
         priority,
         project_id: selectedProjectId,
       });
+      taskStore?.replaceTask(res.data);
       await loadTask();
-      onTaskUpdate?.();
     } catch (error) {
       console.error('Failed to save task:', error);
     } finally {
       setSaving(false);
     }
-  }, [task, saving, title, description, dueDate, priority, selectedProjectId, loadTask, onTaskUpdate]);
+  }, [task, saving, title, description, dueDate, priority, selectedProjectId, loadTask, taskStore]);
 
   // Debounced auto-save
   useEffect(() => {
@@ -222,9 +224,9 @@ export default function TaskDetailModal({
   async function handleToggleComplete() {
     if (!task) return;
     try {
-      await tasksApi.update(task.id, { completed: !task.completed });
+      const res = await tasksApi.update(task.id, { completed: !task.completed });
+      taskStore?.replaceTask(res.data);
       await loadTask();
-      onTaskUpdate?.();
     } catch (error) {
       console.error('Failed to toggle task:', error);
     }

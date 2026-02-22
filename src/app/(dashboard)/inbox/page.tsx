@@ -4,58 +4,23 @@ import { Inbox as InboxIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import TaskList from '@/components/TaskList';
 import ViewSwitcher from '@/components/ViewSwitcher';
-import { tasks as tasksApi, type Task } from '@/lib/api';
+import { tasks as tasksApi } from '@/lib/api';
 import { useViewPreference } from '@/hooks/useViewPreference';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useTaskStore } from '@/contexts/TaskStoreContext';
 
 export default function InboxPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const hasLoadedOnce = useRef(false);
+  const { loadTasksForView, getTasks, loading } = useTaskStore();
   const [view, setView] = useViewPreference('inbox');
   const tDashboard = useTranslations('dashboard');
-  // loading state from useViewPreference is available but not used here
-
-  const loadTasks = useCallback(async () => {
-    setRefreshing(true);
-    if (!hasLoadedOnce.current) {
-      setLoading(true);
-    }
-    try {
-      // Fetch tasks without a project (project_id = null)
-      const res = await tasksApi.list({ project_id: 'null' });
-      setTasks(res.data);
-      hasLoadedOnce.current = true;
-    } catch (error) {
-      console.error('Failed to load tasks:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    loadTasksForView('inbox', () =>
+      tasksApi.list({ project_id: 'null' }).then((r) => r.data)
+    );
+  }, [loadTasksForView]);
 
-  // Listen for task added event from modal
-  useEffect(() => {
-    function handleTaskAdded(e: Event) {
-      const customEvent = e as CustomEvent<import('@/lib/api').Task | undefined>;
-      const newTask = customEvent.detail;
-      
-      // If we have the task data and it has no project (inbox task), add it optimistically
-      if (newTask && newTask.project_id === null) {
-        setTasks((prev) => [newTask, ...prev]);
-      } else {
-        // Fallback to refetch if no task data or task has a project
-        loadTasks();
-      }
-    }
-    window.addEventListener('taskAdded', handleTaskAdded);
-    return () => window.removeEventListener('taskAdded', handleTaskAdded);
-  }, [loadTasks]);
+  const tasks = getTasks();
 
   return (
     <div className="h-full">
@@ -65,7 +30,7 @@ export default function InboxPage() {
             <InboxIcon className="h-6 w-6 text-primary" />
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold text-foreground">{tDashboard('inbox.title')}</h1>
-              {refreshing && !loading && (
+              {loading && (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-muted-foreground/40 border-r-transparent" />
               )}
             </div>
@@ -81,7 +46,7 @@ export default function InboxPage() {
             <p className="mt-4 text-sm text-muted-foreground">{tDashboard('common.loadingTasks')}</p>
           </div>
         ) : (
-          <TaskList tasks={tasks} onTaskUpdate={loadTasks} view={view} />
+          <TaskList tasks={tasks} view={view} />
         )}
       </div>
     </div>

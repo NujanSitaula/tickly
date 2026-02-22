@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { tasks as tasksApi, type Task } from '@/lib/api';
+import { useMemo, useEffect, useState } from 'react';
+import { tasks as tasksApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import TaskList from '@/components/TaskList';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { useTaskStore } from '@/contexts/TaskStoreContext';
 
 type CalendarTab = 'today' | 'upcoming' | 'completed';
 
@@ -14,19 +15,16 @@ function startOfMonth(date: Date) {
 
 function getMonthDays(anchor: Date) {
   const start = startOfMonth(anchor);
-  const firstDayIndex = start.getDay(); // 0-6
+  const firstDayIndex = start.getDay();
   const days: Date[] = [];
-  // Backfill previous days to start week on Sunday
   for (let i = firstDayIndex - 1; i >= 0; i -= 1) {
     days.push(new Date(start.getFullYear(), start.getMonth(), start.getDate() - i - 1));
   }
-  // Current month days
   const current = new Date(start);
   while (current.getMonth() === start.getMonth()) {
     days.push(new Date(current));
     current.setDate(current.getDate() + 1);
   }
-  // Ensure full 6 weeks grid
   while (days.length < 42) {
     const last = days[days.length - 1];
     days.push(new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1));
@@ -37,29 +35,19 @@ function getMonthDays(anchor: Date) {
 export default function CalendarPage() {
   const { user } = useAuth();
   const mode = user?.mode ?? 'advanced';
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { loadTasksForView, getTasks, loading } = useTaskStore();
   const [tab, setTab] = useState<CalendarTab>('today');
   const [monthAnchor, setMonthAnchor] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await tasksApi.list();
-        setTasks(res.data);
-      } catch (error) {
-        console.error('Failed to load tasks for calendar:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+    loadTasksForView('calendar', () => tasksApi.list().then((r) => r.data));
+  }, [loadTasksForView]);
+
+  const tasks = getTasks();
 
   const tasksByDate = useMemo(() => {
-    const map: Record<string, Task[]> = {};
+    const map: Record<string, typeof tasks> = {};
     tasks.forEach((task) => {
       if (!task.due_date) return;
       const key = task.due_date.slice(0, 10);
@@ -81,15 +69,13 @@ export default function CalendarPage() {
         (t) => t.due_date && !t.completed && new Date(t.due_date) > now
       );
     }
-    // today
     return tasks.filter(
       (t) => t.due_date && t.due_date.slice(0, 10) === todayKey && !t.completed
     );
   }, [tasks, tab, todayKey]);
 
   const dayTasks = useMemo(() => {
-    const key = selectedDate;
-    return tasksByDate[key] ?? [];
+    return tasksByDate[selectedDate] ?? [];
   }, [tasksByDate, selectedDate]);
 
   const days = getMonthDays(monthAnchor);
@@ -133,7 +119,6 @@ export default function CalendarPage() {
       </div>
 
       <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 space-y-6">
-        {/* Month navigation + grid */}
         <section className="rounded-xl border border-border bg-card p-4 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -218,7 +203,6 @@ export default function CalendarPage() {
           </div>
         </section>
 
-        {/* Selected day tasks (always Inbox-style in Basic) */}
         <section className="rounded-xl border border-border bg-card p-4 space-y-3">
           <h2 className="text-sm font-medium text-foreground">
             Tasks on {new Date(selectedDate).toLocaleDateString()}
@@ -228,21 +212,13 @@ export default function CalendarPage() {
           ) : dayTasks.length === 0 ? (
             <p className="text-sm text-muted-foreground">No tasks on this day.</p>
           ) : (
-            <TaskList
-              tasks={dayTasks}
-              onTaskUpdate={async () => {
-                const res = await tasksApi.list();
-                setTasks(res.data);
-              }}
-              view="list"
-            />
+            <TaskList tasks={dayTasks} view="list" />
           )}
         </section>
 
-        {/* Tab-based summary list */}
         <section className="rounded-xl border border-border bg-card p-4 space-y-3">
           <h2 className="text-sm font-medium text-foreground">
-            {tab === 'today' && 'Today’s tasks'}
+            {tab === 'today' && "Today's tasks"}
             {tab === 'upcoming' && 'Upcoming tasks'}
             {tab === 'completed' && 'Completed tasks'}
           </h2>
@@ -251,18 +227,10 @@ export default function CalendarPage() {
           ) : filteredTasks.length === 0 ? (
             <p className="text-sm text-muted-foreground">No tasks yet in this view.</p>
           ) : (
-            <TaskList
-              tasks={filteredTasks}
-              onTaskUpdate={async () => {
-                const res = await tasksApi.list();
-                setTasks(res.data);
-              }}
-              view="list"
-            />
+            <TaskList tasks={filteredTasks} view="list" />
           )}
         </section>
       </div>
     </div>
   );
 }
-
