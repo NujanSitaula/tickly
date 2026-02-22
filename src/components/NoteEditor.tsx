@@ -35,7 +35,7 @@ import {
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CheckCircle2, Circle, GripVertical, Image, List, ListTodo, Plus, Type, X } from 'lucide-react';
+import { CheckCircle2, Circle, GripVertical, Image, List, ListTodo, Plus, Redo2, Type, Undo2, X } from 'lucide-react';
 import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, forwardRef } from 'react';
 import RichParagraphEditor from './RichParagraphEditor';
 
@@ -798,7 +798,7 @@ function SortableBlockWrapper({
 // Max image size for note uploads (backend limit 5120 KB; use 5000 KB so we stay under)
 const MAX_IMAGE_UPLOAD_BYTES = 5000 * 1024;
 
-// History management removed - Yjs handles undo/redo via CRDT
+// Block-level undo/redo is provided via Y.UndoManager in the toolbar
 
 const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function NoteEditorInner({
   initialContent,
@@ -884,6 +884,9 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
   // Track which blocks other users are editing via awareness
   const [editingBlocks, setEditingBlocks] = useState<Map<string, { userId: number; userName: string }>>(new Map());
   const [uploadImageError, setUploadImageError] = useState<string | null>(null);
+  const [blockUndoCanUndo, setBlockUndoCanUndo] = useState(false);
+  const [blockUndoCanRedo, setBlockUndoCanRedo] = useState(false);
+  const blockUndoManagerRef = useRef<Y.UndoManager | null>(null);
   
   // Ref to track if initial sync has been done
   const initialSyncDoneRef = useRef(false);
@@ -996,6 +999,31 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
       migrateIfNeeded(noteId, initialContent).catch(console.error);
     }
   }, [noteId, initialContent, readOnly, yjsStateNotFound, yDoc, stateLoaded]);
+
+  // Block-level undo/redo via Yjs UndoManager (blocks array + meta for title)
+  useEffect(() => {
+    if (!yDoc || !stateLoaded || readOnly) return;
+    const blocks = yDoc.getArray('blocks');
+    const meta = yDoc.getMap('meta');
+    const um = new Y.UndoManager([blocks, meta], { trackedOrigins: new Set([null]) });
+    blockUndoManagerRef.current = um;
+
+    const updateStackState = () => {
+      setBlockUndoCanUndo(um.undoStack.length > 0);
+      setBlockUndoCanRedo(um.redoStack.length > 0);
+    };
+    updateStackState();
+    um.on('stack-item-added', updateStackState);
+    um.on('stack-item-popped', updateStackState);
+    um.on('stack-cleared', updateStackState);
+
+    return () => {
+      um.off('stack-item-added', updateStackState);
+      um.off('stack-item-popped', updateStackState);
+      um.off('stack-cleared', updateStackState);
+      blockUndoManagerRef.current = null;
+    };
+  }, [yDoc, stateLoaded, readOnly]);
 
   // Reset initial sync flag when dependencies change
   useEffect(() => {
@@ -1197,7 +1225,7 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
   const lockRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Note: Manual save logic removed - Yjs autosave handles persistence
-  // Note: Undo/redo removed - Yjs handles this via CRDT
+  // Block-level undo/redo: Y.UndoManager scoped to blocks + meta (toolbar buttons)
 
   // Block operations via Yjs
   // Only allow operations after state is loaded and provider is connected
@@ -1652,6 +1680,27 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
                 {connected ? '● Connected' : '○ Disconnected'}
               </span>
             )}
+            <span className="h-5 w-px bg-border" aria-hidden />
+            <button
+              type="button"
+              onClick={() => blockUndoManagerRef.current?.undo()}
+              disabled={!blockUndoCanUndo}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-40 disabled:pointer-events-none"
+              aria-label="Undo"
+              title="Undo"
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => blockUndoManagerRef.current?.redo()}
+              disabled={!blockUndoCanRedo}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-40 disabled:pointer-events-none"
+              aria-label="Redo"
+              title="Redo"
+            >
+              <Redo2 className="h-4 w-4" />
+            </button>
             <span className="h-5 w-px bg-border" aria-hidden />
             <button
               type="button"

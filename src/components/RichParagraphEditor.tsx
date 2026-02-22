@@ -291,7 +291,8 @@ export default function RichParagraphEditor({
           options={{ placement: 'top' }}
           shouldShow={({ state }) => {
             const sel = state.selection;
-            return isTextSelection(sel) && sel.from !== sel.to;
+            const hasSelection = isTextSelection(sel) && sel.from !== sel.to;
+            return editor.isFocused || hasSelection;
           }}
           className="z-50"
         >
