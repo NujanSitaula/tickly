@@ -57,7 +57,7 @@ export default {
       filtersLabels: '筛选和标签',
       completed: '已完成',
       myProjects: '我的项目',
-      helpResources: '帮助和资源',
+      helpResources: '帮助',
     },
     notes: {
       title: '笔记',
@@ -120,6 +120,7 @@ export default {
       noDate: '无日期',
       today: '今天',
       clear: '清除',
+      filterByDate: '按日期筛选',
       addTask: '添加任务',
       adding: '正在添加…',
       deleteAccountTitle: '删除账户',

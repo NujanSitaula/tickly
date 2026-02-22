@@ -2,20 +2,18 @@
 
 import { LayoutGrid } from 'lucide-react';
 import TaskList from '@/components/TaskList';
+import { TaskListSkeleton } from '@/components/Skeleton';
 import ViewSwitcher from '@/components/ViewSwitcher';
 import { tasks as tasksApi } from '@/lib/api';
 import { useViewPreference } from '@/hooks/useViewPreference';
 import { useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useAuth } from '@/contexts/AuthContext';
 import { useTaskStore } from '@/contexts/TaskStoreContext';
 
 export default function UpcomingPage() {
   const { loadTasksForView, getTasks, loading } = useTaskStore();
   const [view, setView] = useViewPreference('upcoming');
   const tDashboard = useTranslations('dashboard');
-  const { user } = useAuth();
-  const mode = user?.mode ?? 'advanced';
 
   const fetchUpcoming = useCallback(async () => {
     const res = await tasksApi.list();
@@ -42,18 +40,15 @@ export default function UpcomingPage() {
               )}
             </div>
           </div>
-          {mode !== 'basic' && <ViewSwitcher view={view} onViewChange={setView} />}
+          <ViewSwitcher view={view} onViewChange={setView} />
         </div>
       </div>
 
       <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         {loading && tasks.length === 0 ? (
-          <div className="py-12 text-center">
-            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
-            <p className="mt-4 text-sm text-muted-foreground">{tDashboard('common.loadingTasks')}</p>
-          </div>
+          <TaskListSkeleton />
         ) : (
-          <TaskList tasks={tasks} view={mode === 'basic' ? 'list' : view} />
+          <TaskList tasks={tasks} view={view} />
         )}
       </div>
     </div>

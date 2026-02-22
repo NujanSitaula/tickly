@@ -4,6 +4,7 @@ import { projects as projectsApi, tasks as tasksApi } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import TaskList from '@/components/TaskList';
+import { ProjectPageSkeleton, TaskListSkeleton } from '@/components/Skeleton';
 import ViewSwitcher from '@/components/ViewSwitcher';
 import { useViewPreference } from '@/hooks/useViewPreference';
 import { useTaskStore } from '@/contexts/TaskStoreContext';
@@ -40,11 +41,7 @@ export default function ProjectPage() {
   const tasks = getTasks();
 
   if (!project) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading project…</p>
-      </div>
-    );
+    return <ProjectPageSkeleton />;
   }
 
   return (
@@ -69,10 +66,7 @@ export default function ProjectPage() {
 
       <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         {loading && tasks.length === 0 ? (
-          <div className="py-12 text-center">
-            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
-            <p className="mt-4 text-sm text-muted-foreground">Loading tasks…</p>
-          </div>
+          <TaskListSkeleton />
         ) : (
           <TaskList tasks={tasks} projectId={projectId} view={view} />
         )}

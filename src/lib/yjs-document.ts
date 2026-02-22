@@ -161,17 +161,18 @@ export function noteContentToYjs(yDoc: Y.Doc, content: NoteContent): void {
   // Clear existing blocks
   blocks.delete(0, blocks.length);
 
-  // Add blocks from content
+  // Add blocks from content (generate id when missing so editor can render)
   for (const block of content.blocks) {
     const blockMap = new Y.Map();
+    const blockId =
+      (block as { id?: string }).id ||
+      `block-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    blockMap.set('id', blockId);
 
     switch (block.type) {
       case 'paragraph': {
         blockMap.set('type', 'paragraph');
-        blockMap.set('text', block.text);
-        // Store block ID if available
-        const blockId = (block as any).id;
-        if (blockId) blockMap.set('id', blockId);
+        blockMap.set('text', block.text ?? '');
         blocks.push([blockMap]);
         break;
       }
@@ -184,8 +185,6 @@ export function noteContentToYjs(yDoc: Y.Doc, content: NoteContent): void {
           itemsArray.push([itemMap]);
         }
         blockMap.set('items', itemsArray);
-        const blockId = (block as any).id;
-        if (blockId) blockMap.set('id', blockId);
         blocks.push([blockMap]);
         break;
       }
@@ -202,8 +201,6 @@ export function noteContentToYjs(yDoc: Y.Doc, content: NoteContent): void {
           itemsArray.push([itemMap]);
         }
         blockMap.set('items', itemsArray);
-        const blockId = (block as any).id;
-        if (blockId) blockMap.set('id', blockId);
         blocks.push([blockMap]);
         break;
       }
@@ -213,8 +210,6 @@ export function noteContentToYjs(yDoc: Y.Doc, content: NoteContent): void {
         if (block.alt) {
           blockMap.set('alt', block.alt);
         }
-        const blockId = (block as any).id;
-        if (blockId) blockMap.set('id', blockId);
         blocks.push([blockMap]);
         break;
       }

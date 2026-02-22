@@ -57,7 +57,7 @@ export default {
       filtersLabels: 'フィルターとラベル',
       completed: '完了',
       myProjects: 'マイプロジェクト',
-      helpResources: 'ヘルプとリソース',
+      helpResources: 'ヘルプ',
     },
     notes: {
       title: 'ノート',
@@ -120,6 +120,7 @@ export default {
       noDate: '日付なし',
       today: '今日',
       clear: 'クリア',
+      filterByDate: '日付で絞り込み',
       addTask: 'タスクを追加',
       adding: '追加中…',
       deleteAccountTitle: 'アカウントを削除',

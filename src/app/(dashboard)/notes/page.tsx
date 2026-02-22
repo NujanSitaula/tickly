@@ -13,6 +13,7 @@ import UnlockFolderModal from '@/components/UnlockFolderModal';
 import LockFolderModal from '@/components/LockFolderModal';
 import { isLockedFolderUnlocked } from '@/utils/lockedFolder';
 import ToastContainer, { type Toast } from '@/components/Toast';
+import { NotesContentSkeleton } from '@/components/Skeleton';
 import {
   DndContext,
   PointerSensor,
@@ -326,12 +327,11 @@ export default function NotesListPage() {
     try {
       setCreating(true);
       const res = await notesApi.create();
-      // Use share token for URL
+      // Use share token for URL; ?edit=1 opens the note in edit mode with first block ready
       if (res.data.share_token) {
-        router.push(`/notes/${res.data.share_token}`);
+        router.push(`/notes/${res.data.share_token}?edit=1`);
       } else {
-        // Fallback to ID if token not available yet
-        router.push(`/notes/${res.data.id}`);
+        router.push(`/notes/${res.data.id}?edit=1`);
       }
     } catch (error) {
       console.error('Failed to create note:', error);
@@ -437,10 +437,7 @@ export default function NotesListPage() {
           </div>
 
           {loading && notes.length === 0 ? (
-            <div className="py-12 text-center">
-              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent" />
-              <p className="mt-3 text-sm text-muted-foreground">{t('loading')}</p>
-            </div>
+            <NotesContentSkeleton />
           ) : filteredNotes.length === 0 ? (
             <div className="rounded-xl border border-border bg-card p-8 text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />

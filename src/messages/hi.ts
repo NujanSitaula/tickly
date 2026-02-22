@@ -57,7 +57,7 @@ export default {
       filtersLabels: 'फ़िल्टर और लेबल',
       completed: 'पूर्ण',
       myProjects: 'मेरे प्रोजेक्ट',
-      helpResources: 'सहायता और संसाधन',
+      helpResources: 'सहायता',
     },
     notes: {
       title: 'नोट्स',
@@ -120,6 +120,7 @@ export default {
       noDate: 'कोई तारीख नहीं',
       today: 'आज',
       clear: 'साफ करें',
+      filterByDate: 'तारीख से फ़िल्टर करें',
       addTask: 'कार्य जोड़ें',
       adding: 'जोड़ रहे हैं…',
       deleteAccountTitle: 'खाता हटाएँ',

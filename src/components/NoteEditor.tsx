@@ -13,6 +13,7 @@ import {
   yjsToNoteContent,
   getTitleFromYjs,
   setTitleInYjs,
+  noteContentToYjs,
   insertBlockInYjs,
   deleteBlockFromYjs,
   moveBlockInYjs,
@@ -173,10 +174,15 @@ function resolveImageUrl(url: string): string {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
-  if (url.startsWith('/storage/')) {
-    return `${ASSET_BASE_URL}${url}`;
+  if (!ASSET_BASE_URL) return url;
+  const path = url.startsWith('/') ? url.slice(1) : url;
+  if (path.startsWith('storage/')) {
+    return `${ASSET_BASE_URL}/${path}`;
   }
-  return url;
+  if (path.startsWith('notes/')) {
+    return `${ASSET_BASE_URL}/storage/${path}`;
+  }
+  return `${ASSET_BASE_URL}/${path}`;
 }
 
 function BulletRowReadOnly({ value }: { value: string }) {
@@ -675,10 +681,11 @@ function BlockImage({
   onRemove?: () => void;
   readOnly?: boolean;
 }) {
+  const src = resolveImageUrl(url);
   return (
     <div className="group relative inline-block max-w-full">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt={alt ?? ''} className="max-h-64 rounded-lg object-contain" />
+      <img src={src} alt={alt ?? ''} className="max-h-64 rounded-lg object-contain" />
     </div>
   );
 }
@@ -705,7 +712,7 @@ function BlockDragPreview({ block }: { block: BlockWithId }) {
     return (
       <div className="flex items-center gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={block.url} alt={block.alt ?? ''} className="max-h-12 rounded object-cover" />
+        <img src={resolveImageUrl(block.url)} alt={block.alt ?? ''} className="max-h-12 rounded object-cover" />
         <span className="text-sm text-muted-foreground">Image</span>
       </div>
     );
@@ -787,6 +794,9 @@ function SortableBlockWrapper({
     </div>
   );
 }
+
+// Max image size for note uploads (backend limit 5120 KB; use 5000 KB so we stay under)
+const MAX_IMAGE_UPLOAD_BYTES = 5000 * 1024;
 
 // History management removed - Yjs handles undo/redo via CRDT
 
@@ -873,6 +883,7 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
   
   // Track which blocks other users are editing via awareness
   const [editingBlocks, setEditingBlocks] = useState<Map<string, { userId: number; userName: string }>>(new Map());
+  const [uploadImageError, setUploadImageError] = useState<string | null>(null);
   
   // Ref to track if initial sync has been done
   const initialSyncDoneRef = useRef(false);
@@ -966,9 +977,22 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
     };
   }, [provider, readOnly, noteId, user, onPresenceChange, connected]);
 
-  // Migrate JSON to Yjs only when server has no Yjs state (404)
+  // Clear upload error after a few seconds
+  useEffect(() => {
+    if (!uploadImageError) return;
+    const t = setTimeout(() => setUploadImageError(null), 5000);
+    return () => clearTimeout(t);
+  }, [uploadImageError]);
+
+  // When server has no Yjs state (404): seed shared yDoc with initialContent so editor shows it, then persist
   useEffect(() => {
     if (!readOnly && yjsStateNotFound && initialContent && yDoc && stateLoaded) {
+      if (initialContent.blocks.length > 0) {
+        const blocks = yDoc.getArray('blocks');
+        if (blocks.length === 0) {
+          noteContentToYjs(yDoc, initialContent);
+        }
+      }
       migrateIfNeeded(noteId, initialContent).catch(console.error);
     }
   }, [noteId, initialContent, readOnly, yjsStateNotFound, yDoc, stateLoaded]);
@@ -1621,60 +1645,75 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
         </DndContext>
       )}
       {!readOnly && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-6">
-          {connected && (
-            <span className="text-xs text-muted-foreground">
-              {connected ? '● Connected' : '○ Disconnected'}
-            </span>
-          )}
-          <span className="h-5 w-px bg-border" aria-hidden />
-          <button
-            type="button"
-            onClick={() => insertBlock(content.blocks.length, { type: 'paragraph', text: '' })}
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Type className="h-4 w-4" /> Paragraph
-          </button>
-          <button
-            type="button"
-            onClick={() => insertBlock(content.blocks.length, { type: 'bulletList', items: [''] })}
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <List className="h-4 w-4" /> Bullet list
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              insertBlock(content.blocks.length, {
-                type: 'todoList',
-                items: [{ text: '', done: false }],
-              })
-            }
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <ListTodo className="h-4 w-4" /> Todo list
-          </button>
-          {onUploadImage && (
-            <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-              <Image className="h-4 w-4" /> Image
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    const url = await onUploadImage(noteId, file);
-                    insertBlock(content.blocks.length, { type: 'image', url, alt: file.name });
-                  } catch (err) {
-                    console.error('Upload failed:', err);
-                  }
-                  e.target.value = '';
-                }}
-              />
-            </label>
-          )}
+        <div className="border-t border-border pt-3 pb-0">
+          <div className="flex flex-wrap items-center gap-2">
+            {connected && (
+              <span className="text-xs text-muted-foreground">
+                {connected ? '● Connected' : '○ Disconnected'}
+              </span>
+            )}
+            <span className="h-5 w-px bg-border" aria-hidden />
+            <button
+              type="button"
+              onClick={() => insertBlock(content.blocks.length, { type: 'paragraph', text: '' })}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Type className="h-4 w-4" /> Paragraph
+            </button>
+            <button
+              type="button"
+              onClick={() => insertBlock(content.blocks.length, { type: 'bulletList', items: [''] })}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <List className="h-4 w-4" /> Bullet list
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                insertBlock(content.blocks.length, {
+                  type: 'todoList',
+                  items: [{ text: '', done: false }],
+                })
+              }
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <ListTodo className="h-4 w-4" /> Todo list
+            </button>
+            {onUploadImage && (
+              <label className="relative inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0">
+                <Image className="h-4 w-4" /> Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  style={{ fontSize: 0 }}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    setUploadImageError(null);
+                    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+                      setUploadImageError('Image must be 5 MB or smaller');
+                      return;
+                    }
+                    try {
+                      const url = await onUploadImage(noteId, file);
+                      insertBlock(content.blocks.length, { type: 'image', url, alt: file.name });
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : 'Upload failed. Try a smaller image.';
+                      const isSizeError = /5120|greater than|too large|size|kilobytes/i.test(msg);
+                      setUploadImageError(isSizeError ? 'Image must be 5 MB or smaller' : msg);
+                    }
+                  }}
+                />
+              </label>
+            )}
+            {uploadImageError && (
+              <span className="text-xs text-destructive" role="alert">
+                {uploadImageError}
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

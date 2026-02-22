@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Menu, Plus } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import AddTaskModal from '@/components/AddTaskModal';
+import { DashboardLayoutSkeleton } from '@/components/Skeleton';
 import FocusIndicatorsLoader from '@/components/FocusIndicatorsLoader';
 import { useIsLg } from '@/hooks/useMediaQuery';
 
@@ -76,14 +77,7 @@ export default function DashboardLayout({
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="mt-4 text-sm text-muted-foreground">Loading…</p>
-        </div>
-      </div>
-    );
+    return <DashboardLayoutSkeleton />;
   }
 
   if (!user) {

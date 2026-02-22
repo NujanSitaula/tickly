@@ -57,7 +57,7 @@ export default {
       filtersLabels: 'Filters & Labels',
       completed: 'Completed',
       myProjects: 'My Projects',
-      helpResources: 'Help & resources',
+      helpResources: 'Help',
     },
     notes: {
       title: 'Notes',
@@ -133,6 +133,7 @@ export default {
       noDate: 'No Date',
       today: 'Today',
       clear: 'Clear',
+      filterByDate: 'Filter by date',
       addTask: 'Add task',
       adding: 'Adding…',
       deleteAccountTitle: 'Delete account',

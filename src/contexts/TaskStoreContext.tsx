@@ -168,10 +168,12 @@ export function TaskStoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(taskStoreReducer, initialState);
 
   const getTasks = useCallback(() => {
-    return state.orderedIds
+    const list = state.orderedIds
       .map((id) => state.tasksById[id])
       .filter((t): t is Task => t != null);
-  }, [state.orderedIds, state.tasksById]);
+    if (!state.viewKey) return list;
+    return list.filter((t) => taskMatchesView(t, state.viewKey));
+  }, [state.orderedIds, state.tasksById, state.viewKey]);
 
   const setViewKey = useCallback((key: string) => {
     dispatch({ type: 'SET_VIEW', viewKey: key });

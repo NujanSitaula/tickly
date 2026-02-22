@@ -14,10 +14,15 @@ function resolveImageUrl(url: string): string {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
-  if (url.startsWith('/storage/')) {
-    return `${ASSET_BASE_URL}${url}`;
+  if (!ASSET_BASE_URL) return url;
+  const path = url.startsWith('/') ? url.slice(1) : url;
+  if (path.startsWith('storage/')) {
+    return `${ASSET_BASE_URL}/${path}`;
   }
-  return url;
+  if (path.startsWith('notes/')) {
+    return `${ASSET_BASE_URL}/storage/${path}`;
+  }
+  return `${ASSET_BASE_URL}/${path}`;
 }
 
 function isHtml(text: string): boolean {

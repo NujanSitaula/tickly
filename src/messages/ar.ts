@@ -57,7 +57,7 @@ export default {
       filtersLabels: 'عوامل التصفية والوسوم',
       completed: 'المكتملة',
       myProjects: 'مشاريعي',
-      helpResources: 'المساعدة والموارد',
+      helpResources: 'المساعدة',
     },
     notes: {
       title: 'الملاحظات',
@@ -120,6 +120,7 @@ export default {
       noDate: 'بدون تاريخ',
       today: 'اليوم',
       clear: 'مسح',
+      filterByDate: 'تصفية حسب التاريخ',
       addTask: 'إضافة مهمة',
       adding: 'جارٍ الإضافة…',
       deleteAccountTitle: 'حذف الحساب',

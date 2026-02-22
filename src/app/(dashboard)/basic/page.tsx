@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { tasks as tasksApi, type Task } from '@/lib/api';
+import { TaskRowsSkeleton } from '@/components/Skeleton';
 
 export default function BasicDashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -81,7 +82,7 @@ export default function BasicDashboardPage() {
         {error && <p className="mb-2 text-xs text-red-600">{error}</p>}
 
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading tasks…</p>
+            <TaskRowsSkeleton rows={4} />
           ) : tasks.length === 0 ? (
             <p className="text-sm text-muted-foreground">No tasks yet. Add your first one above.</p>
           ) : (

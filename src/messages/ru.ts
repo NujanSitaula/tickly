@@ -57,7 +57,7 @@ export default {
       filtersLabels: 'Фильтры и метки',
       completed: 'Выполненные',
       myProjects: 'Мои проекты',
-      helpResources: 'Помощь и ресурсы',
+      helpResources: 'Помощь',
     },
     notes: {
       title: 'Заметки',
@@ -120,6 +120,7 @@ export default {
       noDate: 'Без даты',
       today: 'Сегодня',
       clear: 'Очистить',
+      filterByDate: 'Фильтр по дате',
       addTask: 'Добавить задачу',
       adding: 'Добавление…',
       deleteAccountTitle: 'Удалить аккаунт',

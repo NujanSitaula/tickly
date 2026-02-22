@@ -5,9 +5,26 @@ import { tasks as tasksApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import TaskList from '@/components/TaskList';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { TaskRowsSkeleton } from '@/components/Skeleton';
 import { useTaskStore } from '@/contexts/TaskStoreContext';
 
 type CalendarTab = 'today' | 'upcoming' | 'completed';
+
+/** Format a Date as local YYYY-MM-DD (avoids UTC off-by-one). */
+function toLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** Parse YYYY-MM-DD as local date (avoids UTC midnight shifting the day). */
+function parseLocalDate(dateStr: string): Date {
+  const y = parseInt(dateStr.slice(0, 4), 10);
+  const m = parseInt(dateStr.slice(5, 7), 10) - 1;
+  const d = parseInt(dateStr.slice(8, 10), 10);
+  return new Date(y, m, d);
+}
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -38,7 +55,7 @@ export default function CalendarPage() {
   const { loadTasksForView, getTasks, loading } = useTaskStore();
   const [tab, setTab] = useState<CalendarTab>('today');
   const [monthAnchor, setMonthAnchor] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState<string>(() => toLocalDateString(new Date()));
 
   useEffect(() => {
     loadTasksForView('calendar', () => tasksApi.list().then((r) => r.data));
@@ -57,7 +74,7 @@ export default function CalendarPage() {
     return map;
   }, [tasks]);
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = toLocalDateString(new Date());
 
   const filteredTasks = useMemo(() => {
     if (tab === 'completed') {
@@ -151,7 +168,7 @@ export default function CalendarPage() {
               onClick={() => {
                 const now = new Date();
                 setMonthAnchor(now);
-                setSelectedDate(now.toISOString().slice(0, 10));
+                setSelectedDate(toLocalDateString(now));
               }}
               className="cursor-pointer rounded-md px-3 py-1 text-xs font-medium border border-border bg-background text-foreground hover:bg-muted"
             >
@@ -168,7 +185,7 @@ export default function CalendarPage() {
           </div>
           <div className="grid grid-cols-7 gap-1 text-xs">
             {days.map((day) => {
-              const key = day.toISOString().slice(0, 10);
+              const key = toLocalDateString(day);
               const inMonth = day.getMonth() === monthAnchor.getMonth();
               const count = (tasksByDate[key] ?? []).length;
               const isSelected = selectedDate === key;
@@ -203,33 +220,35 @@ export default function CalendarPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-medium text-foreground">
-            Tasks on {new Date(selectedDate).toLocaleDateString()}
-          </h2>
-          {loading && dayTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Loading tasks…</p>
-          ) : dayTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No tasks on this day.</p>
-          ) : (
-            <TaskList tasks={dayTasks} view="list" />
-          )}
-        </section>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <section className="rounded-xl border border-border bg-card p-4 space-y-3 min-h-0">
+            <h2 className="text-sm font-medium text-foreground">
+              {tab === 'today' && "Today's tasks"}
+              {tab === 'upcoming' && 'Upcoming tasks'}
+              {tab === 'completed' && 'Completed tasks'}
+            </h2>
+            {loading && filteredTasks.length === 0 ? (
+              <TaskRowsSkeleton rows={4} />
+            ) : filteredTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tasks yet in this view.</p>
+            ) : (
+              <TaskList tasks={filteredTasks} view="list" />
+            )}
+          </section>
 
-        <section className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-medium text-foreground">
-            {tab === 'today' && "Today's tasks"}
-            {tab === 'upcoming' && 'Upcoming tasks'}
-            {tab === 'completed' && 'Completed tasks'}
-          </h2>
-          {loading && filteredTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Loading tasks…</p>
-          ) : filteredTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No tasks yet in this view.</p>
-          ) : (
-            <TaskList tasks={filteredTasks} view="list" />
-          )}
-        </section>
+          <section className="rounded-xl border border-border bg-card p-4 space-y-3 min-h-0">
+            <h2 className="text-sm font-medium text-foreground">
+              Tasks on {parseLocalDate(selectedDate).toLocaleDateString()}
+            </h2>
+            {loading && dayTasks.length === 0 ? (
+              <TaskRowsSkeleton rows={2} />
+            ) : dayTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tasks on this day.</p>
+            ) : (
+              <TaskList tasks={dayTasks} view="list" />
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );

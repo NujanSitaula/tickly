@@ -2,6 +2,7 @@
 
 import { CheckCircle2 } from 'lucide-react';
 import TaskItem from '@/components/TaskItem';
+import { CompletedContentSkeleton } from '@/components/Skeleton';
 import DatePickerPopover from '@/components/DatePickerPopover';
 import TaskDetailModal from '@/components/TaskDetailModal';
 import { tasks as tasksApi } from '@/lib/api';
@@ -114,13 +115,10 @@ export default function CompletedPage() {
         </div>
       </div>
 
-      <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
-        {loading && tasks.length === 0 ? (
-          <div className="py-12 text-center">
-            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
-            <p className="mt-4 text-sm text-muted-foreground">{tDashboard('common.loadingTasks')}</p>
-          </div>
-        ) : (
+      {loading && tasks.length === 0 ? (
+        <CompletedContentSkeleton />
+      ) : (
+        <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
           <>
             {visibleDateKeys.length === 0 && (
               <div className="py-12 text-center text-sm text-muted-foreground">
@@ -160,8 +158,8 @@ export default function CompletedPage() {
               onTaskUpdate={undefined}
             />
           </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

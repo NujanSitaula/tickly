@@ -104,7 +104,6 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
     },
     { icon: LayoutGrid, label: tSidebar('upcoming'), href: '/upcoming' },
     { icon: Calendar, label: tSidebar('calendar'), href: '/calendar' },
-    { icon: FileText, label: tSidebar('notes'), href: '/notes' },
     ...(mode === 'basic'
       ? []
       : [{ icon: Filter, label: tSidebar('filtersLabels'), href: '/filters' as const }]),
@@ -212,12 +211,6 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                       <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
                         {user?.email}
                       </div>
-                      <button
-                        onClick={handleLogout}
-                        className="cursor-pointer w-full rounded-md px-3 py-2 text-left text-sm text-popover-foreground hover:bg-muted transition-colors"
-                      >
-                        Sign out
-                      </button>
                       <Link
                         href="/settings"
                         onClick={() => setShowUserMenu(false)}
@@ -225,6 +218,12 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
                       >
                         Settings
                       </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="cursor-pointer w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-muted dark:text-red-400 transition-colors"
+                      >
+                        Sign out
+                      </button>
                     </div>
                   </div>
                 </>
@@ -283,6 +282,22 @@ export default function Sidebar({ projects, collapsed, onToggle, onProjectsChang
               </Link>
             );
           })}
+        </div>
+
+        <hr className="my-2 border-border" aria-hidden />
+        <div className="space-y-1">
+          <Link
+            href="/notes"
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              pathname === '/notes' || pathname?.startsWith('/notes/')
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+            title={!effectiveExpanded ? tSidebar('notes') : undefined}
+          >
+            <FileText className="h-4 w-4 flex-shrink-0" />
+            {effectiveExpanded && <span className="flex-1">{tSidebar('notes')}</span>}
+          </Link>
         </div>
 
         {/* Projects Section (Advanced mode only) */}

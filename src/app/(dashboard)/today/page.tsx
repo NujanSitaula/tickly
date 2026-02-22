@@ -2,6 +2,7 @@
 
 import { tasks as tasksApi } from '@/lib/api';
 import { Calendar } from 'lucide-react';
+import { TaskListSkeleton } from '@/components/Skeleton';
 import { useTranslations, useLocale } from 'next-intl';
 import { useCallback, useEffect, useMemo } from 'react';
 import TaskList from '@/components/TaskList';
@@ -47,29 +48,24 @@ export default function TodayPage() {
       <div className="border-b border-border bg-background px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <Calendar className="h-6 w-6 text-primary" />
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-foreground">{tDashboard('today.title')}</h1>
-                {loading && (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-muted-foreground/40 border-r-transparent" />
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">{todayFormatted}</p>
+            <Calendar className="h-6 w-6 text-primary shrink-0" />
+            <div className="flex min-w-0 flex-wrap items-baseline gap-2 gap-y-0 sm:gap-3">
+              <h1 className="text-2xl font-semibold text-foreground">{tDashboard('today.title')}</h1>
+              {loading && (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-muted-foreground/40 border-r-transparent shrink-0" />
+              )}
+              <span className="text-sm text-muted-foreground">{todayFormatted}</span>
             </div>
           </div>
-          {mode !== 'basic' && <ViewSwitcher view={view} onViewChange={setView} />}
+          <ViewSwitcher view={view} onViewChange={setView} />
         </div>
       </div>
 
       <div className="px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         {loading && tasks.length === 0 ? (
-          <div className="py-12 text-center">
-            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
-            <p className="mt-4 text-sm text-muted-foreground">{tDashboard('common.loadingTasks')}</p>
-          </div>
+          <TaskListSkeleton />
         ) : (
-          <TaskList tasks={tasks} view={mode === 'basic' ? 'list' : view} />
+          <TaskList tasks={tasks} view={view} />
         )}
       </div>
     </div>

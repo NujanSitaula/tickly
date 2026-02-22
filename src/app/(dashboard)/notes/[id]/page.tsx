@@ -10,13 +10,14 @@ import { websocket } from '@/lib/websocket';
 import { useNoteYjs } from '@/hooks/useNoteYjs';
 import { Archive, ArrowLeft, CheckCircle, Eye, Flag, Loader2, Lock, MoreVertical, Pencil, Share2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 export default function NotePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const param = typeof params.id === 'string' ? params.id : '';
   const isNumericId = /^\d+$/.test(param);
@@ -26,6 +27,7 @@ export default function NotePage() {
   const [title, setTitle] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const openInEditFromQuery = searchParams.get('edit') === '1';
   const [isEditing, setIsEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -97,8 +99,9 @@ export default function NotePage() {
           }
         }
         if (res.data.share_token && res.data.share_token !== param) {
-          // Redirect to token URL
-          router.replace(`/notes/${res.data.share_token}`);
+          const query = searchParams.toString();
+          const q = query ? `?${query}` : '';
+          router.replace(`/notes/${res.data.share_token}${q}`);
           return;
         }
       } else {
@@ -122,11 +125,24 @@ export default function NotePage() {
     } finally {
       setLoading(false);
     }
-  }, [param, isNumericId, numericId, router]);
+  }, [param, isNumericId, numericId, router, searchParams]);
 
   useEffect(() => {
     loadNote();
   }, [loadNote]);
+
+  // Open in edit mode when arriving with ?edit=1 (e.g. after clicking New Note)
+  useEffect(() => {
+    if (openInEditFromQuery && note && canEdit) {
+      setIsEditing(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('edit');
+      const clean = url.pathname + (url.search || '');
+      if (window.history.replaceState) {
+        window.history.replaceState(null, '', clean);
+      }
+    }
+  }, [openInEditFromQuery, note, canEdit]);
 
   // Subscribe to real-time note events
   useEffect(() => {
@@ -204,6 +220,11 @@ export default function NotePage() {
 
   const handleUploadImage = useCallback(async (noteId: number, file: File): Promise<string> => {
     const res = await notesApi.upload(noteId, file);
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
+    const assetBase = apiUrl.replace(/\/api\/v1\/?$/, '');
+    if (assetBase && res.path) {
+      return `${assetBase}/storage/${res.path.replace(/^\//, '')}`;
+    }
     return res.url;
   }, []);
 
