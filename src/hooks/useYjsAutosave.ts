@@ -4,8 +4,7 @@ import { yjsToNoteContent } from '@/lib/yjs-document';
 import type { NoteContent } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-const AUTOSAVE_INTERVAL_MS = 3000; // Save every 3 seconds
-const IDLE_SAVE_DELAY_MS = 2000; // Save 2 seconds after last change
+const DEBOUNCE_MS = 2000; // Save 2 seconds after last update
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -39,9 +38,7 @@ export function useYjsAutosave({
 } {
   const savingRef = useRef(false);
   const lastSavedRef = useRef<Date | null>(null);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const idleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasChangesRef = useRef(false);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const saveState = async () => {
     if (!yDoc || savingRef.current) return;
@@ -92,7 +89,6 @@ export function useYjsAutosave({
       }
 
       lastSavedRef.current = new Date();
-      hasChangesRef.current = false;
       onSaveComplete?.();
     } catch (error) {
       console.error('Autosave error:', error);
@@ -102,48 +98,28 @@ export function useYjsAutosave({
     }
   };
 
-  // Periodic save
-  useEffect(() => {
-    if (!enabled || !yDoc) return;
-
-    const intervalId = setInterval(() => {
-      if (hasChangesRef.current && !savingRef.current) {
-        saveState();
-      }
-    }, AUTOSAVE_INTERVAL_MS);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [enabled, yDoc, noteId]);
-
-  // Idle save (save after no changes for a period)
+  // Update-driven debounced save (no fixed interval)
   useEffect(() => {
     if (!enabled || !yDoc) return;
 
     const handleUpdate = () => {
-      hasChangesRef.current = true;
-
-      // Clear existing idle timeout
-      if (idleTimeoutRef.current) {
-        clearTimeout(idleTimeoutRef.current);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
 
-      // Set new idle timeout
-      idleTimeoutRef.current = setTimeout(() => {
-        if (hasChangesRef.current && !savingRef.current) {
+      debounceTimeoutRef.current = setTimeout(() => {
+        if (!savingRef.current) {
           saveState();
         }
-      }, IDLE_SAVE_DELAY_MS);
+      }, DEBOUNCE_MS);
     };
 
-    // Listen to Yjs document updates
     yDoc.on('update', handleUpdate);
 
     return () => {
       yDoc.off('update', handleUpdate);
-      if (idleTimeoutRef.current) {
-        clearTimeout(idleTimeoutRef.current);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
     };
   }, [enabled, yDoc]);
@@ -153,7 +129,7 @@ export function useYjsAutosave({
     if (!enabled || !yDoc) return;
 
     const handleBeforeUnload = () => {
-      if (hasChangesRef.current && !savingRef.current) {
+      if (!savingRef.current) {
         // Use sendBeacon for reliable save on page unload
         const token = getToken();
         if (token) {
