@@ -127,7 +127,7 @@ interface RichParagraphEditorProps {
   placeholder?: string;
   onFocus?: () => void;
   onBlur?: () => void;
-  // Yjs collaboration props (optional)
+  // Yjs collaboration props (optional). When yDoc/provider are attached, content must be Yjs-derived only (no JSON).
   yDoc?: Y.Doc | null;
   provider?: WebsocketProvider | null;
   blockId?: string; // ID of the block this paragraph belongs to

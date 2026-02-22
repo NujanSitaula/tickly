@@ -7,7 +7,7 @@ import NoteView from '@/components/NoteView';
 import { useAuth } from '@/contexts/AuthContext';
 import { notes as notesApi, type Note, type NoteContent } from '@/lib/api';
 import { websocket } from '@/lib/websocket';
-import { useYjsContent } from '@/hooks/useYjsContent';
+import { useNoteYjs } from '@/hooks/useNoteYjs';
 import { Archive, ArrowLeft, CheckCircle, Eye, Flag, Loader2, Lock, MoreVertical, Pencil, Share2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -48,13 +48,13 @@ export default function NotePage() {
     if (!isEditing) setContentSaving(false);
   }, [isEditing]);
 
-  // Yjs content + presence when viewing (not editing)
-  const yjs = useYjsContent(
-    note?.id ?? 0,
-    note?.content ?? null,
-    user ?? null,
-    !!note && !isEditing
-  );
+  // Shared Yjs source per noteId: one Y.Doc for both view and edit; fetch once, apply only when doc empty
+  const yjs = useNoteYjs({
+    noteId: note?.id ?? 0,
+    initialTitle: note?.title ?? '',
+    user: user ?? null,
+    enabled: !!note && note.id > 0,
+  });
   const otherViewers = isEditing ? editorViewers : yjs.otherViewers;
 
   // Avoid showing duplicated title from Yjs merge (view mode only displays; we don't write)
@@ -443,12 +443,16 @@ export default function NotePage() {
         {isEditing ? (
           <NoteEditor
             ref={noteEditorRef}
-            initialContent={note.content ?? { blocks: [] }}
+            noteId={note.id}
+            yDoc={yjs.yDoc}
+            provider={yjs.provider}
+            stateLoaded={yjs.stateLoaded}
+            yjsStateNotFound={yjs.yjsStateNotFound}
+            initialContent={note.content ?? null}
             initialTitle={note.title ?? ''}
             onSave={handleSaveContent}
             onTitleChange={setTitle}
             readOnly={!canEdit}
-            noteId={note.id}
             onUploadImage={canEdit ? handleUploadImage : undefined}
             onPresenceChange={setEditorViewers}
             onContentSavingChange={setContentSaving}

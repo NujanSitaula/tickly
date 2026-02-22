@@ -1,12 +1,30 @@
 'use client';
 
 import {
+  DndContext,
+  closestCenter,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Briefcase,
-  Calendar,
   CheckCircle2,
   ChevronDown,
   Circle,
   Flag,
+  GripVertical,
   Lock,
   MessageSquare,
   Paperclip,
@@ -14,7 +32,8 @@ import {
   Star,
   X,
 } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import DatePickerPopover from '@/components/DatePickerPopover';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   comments as commentsApi,
   projects as projectsApi,
@@ -41,6 +60,41 @@ function normalizeDateInputValue(value: string | null | undefined): string {
   // Accept both "YYYY-MM-DD" and datetime strings from API; input[type=date] needs YYYY-MM-DD.
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
   return match ? match[1] : '';
+}
+
+function SortableSubtaskRow({
+  subtask,
+  children,
+}: {
+  subtask: Subtask;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: subtask.id,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      className={`group/subtask flex items-center gap-2 rounded-md border border-transparent bg-muted/30 px-2.5 py-1.5 hover:border-border transition-colors touch-none ${
+        isDragging ? 'opacity-40' : ''
+      }`}
+    >
+      <button
+        type="button"
+        className="shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/70 hover:text-muted-foreground"
+        aria-label="Drag to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      {children}
+    </div>
+  );
 }
 
 export default function TaskDetailModal({
@@ -73,6 +127,14 @@ export default function TaskDetailModal({
   // Subtask state
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<number | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState('');
+  const editingSubtaskIdRef = useRef<number | null>(null);
+  editingSubtaskIdRef.current = editingSubtaskId;
+  const [activeDraggingSubtaskId, setActiveDraggingSubtaskId] = useState<number | null>(null);
+  const subtaskSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
 
   // Comment state
   const [newComment, setNewComment] = useState('');
@@ -97,7 +159,16 @@ export default function TaskDetailModal({
       setDueDate(normalizeDateInputValue(res.data.due_date));
       setPriority(res.data.priority);
       setSelectedProjectId(res.data.project_id);
-      setSubtasks(res.data.subtasks || []);
+      const nextSubtasks = res.data.subtasks || [];
+      setSubtasks((prev) => {
+        const editingId = editingSubtaskIdRef.current;
+        if (editingId == null) return nextSubtasks;
+        const edited = prev.find((s) => s.id === editingId);
+        if (!edited) return nextSubtasks;
+        return nextSubtasks.map((s) =>
+          s.id === editingId ? { ...s, title: edited.title } : s
+        );
+      });
       setComments(res.data.comments || []);
       setDirty(false);
     } catch (error) {
@@ -157,7 +228,11 @@ export default function TaskDetailModal({
       loadTask();
     };
 
-    const handleSubtaskDeleted = () => {
+    const handleSubtaskDeleted = (data: { subtask_id: number; task_id: number }) => {
+      if (data.subtask_id === editingSubtaskIdRef.current) {
+        setEditingSubtaskId(null);
+        setEditingSubtaskTitle('');
+      }
       loadTask();
     };
 
@@ -260,6 +335,31 @@ export default function TaskDetailModal({
       await loadTask();
     } catch (error) {
       console.error('Failed to delete subtask:', error);
+    }
+  }
+
+  function handleSubtaskDragStart(event: DragStartEvent) {
+    setActiveDraggingSubtaskId(event.active.id as number);
+  }
+
+  async function handleSubtaskDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    setActiveDraggingSubtaskId(null);
+    if (!over || active.id === over.id) return;
+    const oldIndex = subtasks.findIndex((s) => s.id === active.id);
+    const newIndex = subtasks.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(subtasks, oldIndex, newIndex);
+    setSubtasks(reordered);
+    try {
+      await Promise.all(
+        reordered.map((subtask, index) =>
+          subtasksApi.update(subtask.id, { order: index })
+        )
+      );
+    } catch (err) {
+      console.error('Failed to persist subtask order:', err);
+      await loadTask();
     }
   }
 
@@ -388,43 +488,114 @@ export default function TaskDetailModal({
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-sm font-medium text-muted-foreground">Subtasks</span>
                   </div>
-                  <div className="space-y-2">
-                    {subtasks.map((subtask) => (
-                      <div key={subtask.id} className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleSubtask(subtask)}
-                          className="cursor-pointer flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
-                        >
-                          {subtask.completed ? (
-                            <CheckCircle2 className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Circle className="h-4 w-4" />
-                          )}
-                        </button>
-                        <input
-                          type="text"
-                          value={subtask.title}
-                          onChange={async (e) => {
-                            await subtasksApi.update(subtask.id, { title: e.target.value });
-                            await loadTask();
-                          }}
-                          className={`flex-1 border-0 bg-transparent text-sm text-foreground focus:outline-none focus:ring-0 ${
-                            subtask.completed ? 'line-through text-muted-foreground' : ''
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSubtask(subtask.id)}
-                          className="cursor-pointer text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                  <div className="space-y-1.5">
+                  <DndContext
+                    sensors={subtaskSensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleSubtaskDragStart}
+                    onDragEnd={handleSubtaskDragEnd}
+                    modifiers={[restrictToVerticalAxis]}
+                  >
+                    <SortableContext
+                      items={subtasks.map((s) => s.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-1.5">
+                        {subtasks.map((subtask) => {
+                          const isEditing = editingSubtaskId === subtask.id;
+                          const displayTitle = isEditing ? editingSubtaskTitle : subtask.title;
+                          return (
+                            <SortableSubtaskRow key={subtask.id} subtask={subtask}>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSubtask(subtask)}
+                                className="cursor-pointer flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                {subtask.completed ? (
+                                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <Circle className="h-4 w-4" />
+                                )}
+                              </button>
+                              <input
+                                type="text"
+                                value={displayTitle}
+                                onChange={(e) => {
+                                  if (isEditing) {
+                                    setEditingSubtaskTitle(e.target.value);
+                                  }
+                                }}
+                                onFocus={() => {
+                                  setEditingSubtaskId(subtask.id);
+                                  setEditingSubtaskTitle(subtask.title);
+                                }}
+                                onBlur={async () => {
+                                  if (editingSubtaskIdRef.current !== subtask.id) return;
+                                  const trimmed = editingSubtaskTitle.trim();
+                                  if (trimmed !== subtask.title) {
+                                    try {
+                                      await subtasksApi.update(subtask.id, { title: trimmed || subtask.title });
+                                      setSubtasks((prev) =>
+                                        prev.map((s) =>
+                                          s.id === subtask.id ? { ...s, title: trimmed || subtask.title } : s
+                                        )
+                                      );
+                                    } catch (err) {
+                                      console.error('Failed to update subtask title:', err);
+                                    }
+                                  }
+                                  setEditingSubtaskId(null);
+                                  setEditingSubtaskTitle('');
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    (e.target as HTMLInputElement).blur();
+                                  }
+                                }}
+                                className={`min-w-0 flex-1 border-0 bg-transparent text-sm text-foreground focus:outline-none focus:ring-0 ${
+                                  subtask.completed ? 'line-through text-muted-foreground' : ''
+                                }`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSubtask(subtask.id)}
+                                className="cursor-pointer p-1 text-muted-foreground opacity-0 group-hover/subtask:opacity-100 hover:text-destructive transition-opacity"
+                                aria-label="Delete subtask"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </SortableSubtaskRow>
+                          );
+                        })}
                       </div>
-                    ))}
-                    {showSubtaskInput ? (
-                      <div className="flex items-center gap-2">
-                        <Circle className="h-4 w-4 text-muted-foreground" />
+                    </SortableContext>
+                    <DragOverlay dropAnimation={null}>
+                      {activeDraggingSubtaskId != null ? (() => {
+                        const sub = subtasks.find((s) => s.id === activeDraggingSubtaskId);
+                        if (!sub) return null;
+                        return (
+                          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-1.5 shadow-lg ring-1 ring-primary/20">
+                            <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            {sub.completed ? (
+                              <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                            ) : (
+                              <Circle className="h-4 w-4 shrink-0" />
+                            )}
+                            <span
+                              className={`text-sm ${
+                                sub.completed ? 'line-through text-muted-foreground' : 'text-foreground'
+                              }`}
+                            >
+                              {sub.title || 'Subtask'}
+                            </span>
+                          </div>
+                        );
+                      })() : null}
+                    </DragOverlay>
+                  </DndContext>
+                  {showSubtaskInput ? (
+                      <div className="flex items-center gap-2 rounded-md border border-transparent bg-muted/30 px-2.5 py-1.5">
+                        <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <input
                           type="text"
                           value={newSubtaskTitle}
@@ -439,12 +610,12 @@ export default function TaskDetailModal({
                           }}
                           autoFocus
                           placeholder="Subtask title"
-                          className="flex-1 border-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                          className="min-w-0 flex-1 border-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
                         />
                         <button
                           type="button"
                           onClick={handleAddSubtask}
-                          className="cursor-pointer text-primary hover:text-primary/80"
+                          className="cursor-pointer shrink-0 text-primary hover:text-primary/80"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -453,7 +624,7 @@ export default function TaskDetailModal({
                       <button
                         type="button"
                         onClick={() => setShowSubtaskInput(true)}
-                        className="cursor-pointer flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className="cursor-pointer flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Add sub-task</span>
@@ -623,14 +794,14 @@ export default function TaskDetailModal({
                     Date
                   </label>
                   <div className="space-y-2">
-                    <input
-                      type="date"
+                    <DatePickerPopover
                       value={dueDate}
-                      onChange={(e) => {
-                        setDueDate(e.target.value);
+                      onChange={(v) => {
+                        setDueDate(v);
                         setDirty(true);
                       }}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none"
+                      placeholder="Choose date"
+                      inputStyle
                     />
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Star className="h-3 w-3 text-orange-500" />

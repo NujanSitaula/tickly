@@ -6,6 +6,7 @@ import { websocket } from '@/lib/websocket';
 import { useAuth } from '@/contexts/AuthContext';
 import { useYjsProvider } from '@/hooks/useYjsProvider';
 import type { NoteViewer } from '@/hooks/useYjsContent';
+import type { WebsocketProvider } from 'y-websocket';
 import { useYjsAutosave } from '@/hooks/useYjsAutosave';
 import { migrateIfNeeded } from '@/lib/yjs-migration';
 import {
@@ -48,6 +49,14 @@ interface NoteEditorProps {
   onTitleChange?: (title: string) => void;
   readOnly?: boolean;
   noteId: number;
+  /** When provided (e.g. from shared useNoteYjs), use this Y.Doc instead of useYjsProvider. */
+  yDoc?: Y.Doc | null;
+  /** When provided with yDoc, use this provider instead of useYjsProvider. */
+  provider?: WebsocketProvider | null;
+  /** When using shared yDoc/provider, pass stateLoaded from the shared source. */
+  stateLoaded?: boolean;
+  /** When true, server has no Yjs state (404); run migration if initialContent is present. */
+  yjsStateNotFound?: boolean;
   onUploadImage?: (noteId: number, file: File) => Promise<string>;
   onPresenceChange?: (viewers: NoteViewer[]) => void;
   onContentSavingChange?: (saving: boolean) => void;
@@ -788,6 +797,10 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
   onTitleChange,
   readOnly = false,
   noteId,
+  yDoc: yDocProp,
+  provider: providerProp,
+  stateLoaded: stateLoadedProp,
+  yjsStateNotFound = false,
   onUploadImage,
   onPresenceChange,
   onContentSavingChange,
@@ -795,13 +808,18 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
   getCurrentTitle,
 }, ref) {
   const { user } = useAuth();
-  
-  const { yDoc, provider, connected, stateLoaded } = useYjsProvider({
+
+  const providerHook = useYjsProvider({
     noteId,
-    initialContent: initialContent || null,
+    initialContent: null,
     initialTitle,
-    enabled: !readOnly,
+    enabled: !readOnly && yDocProp == null && providerProp == null,
   });
+
+  const yDoc = yDocProp ?? providerHook.yDoc;
+  const provider = providerProp ?? providerHook.provider;
+  const connected = providerProp != null ? undefined : providerHook.connected;
+  const stateLoaded = stateLoadedProp ?? providerHook.stateLoaded;
 
   useImperativeHandle(ref, () => ({
     setYjsTitle: (title: string) => {
@@ -850,10 +868,8 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
     return () => meta.unobserve(onMetaChange);
   }, [yDoc, onTitleChange, readOnly, isTitleInputFocused, getCurrentTitle]);
 
-  // Local state for rendering (synced from Yjs)
-  const [content, setContent] = useState<NoteContentWithBlockIds>(() => ({
-    blocks: normalizeBlocks(initialContent?.blocks ?? []),
-  }));
+  // Local state for rendering (synced only from Yjs; do not seed from initialContent)
+  const [content, setContent] = useState<NoteContentWithBlockIds>(() => ({ blocks: [] }));
   
   // Track which blocks other users are editing via awareness
   const [editingBlocks, setEditingBlocks] = useState<Map<string, { userId: number; userName: string }>>(new Map());
@@ -950,14 +966,12 @@ const NoteEditorInner = forwardRef<NoteEditorHandle, NoteEditorProps>(function N
     };
   }, [provider, readOnly, noteId, user, onPresenceChange, connected]);
 
-  // Migrate content to Yjs on mount if needed
-  // Only migrate if Yjs state doesn't exist yet (checked inside migrateIfNeeded)
+  // Migrate JSON to Yjs only when server has no Yjs state (404)
   useEffect(() => {
-    if (!readOnly && initialContent && yDoc && stateLoaded) {
-      // Only migrate after state is loaded, and only if state doesn't exist
+    if (!readOnly && yjsStateNotFound && initialContent && yDoc && stateLoaded) {
       migrateIfNeeded(noteId, initialContent).catch(console.error);
     }
-  }, [noteId, initialContent, readOnly, yDoc, stateLoaded]);
+  }, [noteId, initialContent, readOnly, yjsStateNotFound, yDoc, stateLoaded]);
 
   // Reset initial sync flag when dependencies change
   useEffect(() => {

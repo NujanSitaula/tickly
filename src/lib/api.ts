@@ -240,13 +240,20 @@ export const tasks = {
     const query = q.toString();
     return api<{ data: Task[] }>(`/tasks${query ? `?${query}` : ''}`);
   },
-  create: (project_id: number | null | undefined, title: string, due_date?: string, priority?: number, status?: string) =>
+  create: (
+    project_id: number | null | undefined,
+    title: string,
+    due_date?: string,
+    priority?: number,
+    status?: string,
+    description?: string | null
+  ) =>
     api<{ data: Task }>('/tasks', {
       method: 'POST',
-      // Default to P4 (lowest) when not provided
       body: JSON.stringify({
         project_id: project_id ?? null,
         title,
+        description: description ?? null,
         due_date: due_date ?? null,
         priority: priority ?? 4,
         status: status ?? 'todo',

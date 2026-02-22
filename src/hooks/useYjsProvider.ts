@@ -27,7 +27,8 @@ interface UseYjsProviderReturn {
 }
 
 /**
- * Hook to manage Yjs WebSocket provider lifecycle
+ * Hook to manage Yjs WebSocket provider lifecycle.
+ * Single source of truth: fetch /yjs-state once per noteId, apply only when doc is empty.
  */
 export function useYjsProvider({
   noteId,
@@ -42,56 +43,70 @@ export function useYjsProvider({
   const [stateLoaded, setStateLoaded] = useState(false);
   const initializedRef = useRef(false);
   const stateLoadingRef = useRef(false);
+  const fetchedForNoteIdRef = useRef<number | null>(null);
+  const prevNoteIdRef = useRef<number>(noteId);
+  const docNoteIdRef = useRef<number | null>(null);
+  const initialTitleRef = useRef(initialTitle);
+  initialTitleRef.current = initialTitle;
 
+  // When noteId changes: reset refs, destroy previous provider/doc, so we init once per new noteId
   useEffect(() => {
-    if (!enabled) {
-      return;
+    if (!enabled) return;
+    if (prevNoteIdRef.current !== noteId) {
+      prevNoteIdRef.current = noteId;
+      initializedRef.current = false;
+      stateLoadingRef.current = false;
+      fetchedForNoteIdRef.current = null;
+      setProvider((prev) => {
+        if (prev) {
+          prev.destroy();
+        }
+        return null;
+      });
+      setYDoc(null);
+      setStateLoaded(false);
+      setConnected(false);
+      docNoteIdRef.current = null;
     }
+  }, [noteId, enabled]);
 
-    // Seed doc with initialContent and initialTitle for instant display; server state will sync in background
-    if (!initializedRef.current) {
-      const doc = initializeYjsDoc(noteId, initialContent ?? undefined, initialTitle);
-      setYDoc(doc);
-      initializedRef.current = true;
-      setStateLoaded(true); // Connect immediately; server state will be applied in background
-    }
+  // Create Y.Doc once per noteId (empty; server state applied only if doc empty in loadInitialState)
+  useEffect(() => {
+    if (!enabled || noteId <= 0) return;
+    if (initializedRef.current) return;
 
-    const doc = yDoc;
-    if (!doc) return;
+    const doc = initializeYjsDoc(noteId, undefined, undefined);
+    docNoteIdRef.current = noteId;
+    setYDoc(doc);
+    initializedRef.current = true;
+    setStateLoaded(true);
 
-    if (!stateLoaded) {
-      return;
-    }
+    return () => {
+      // Cleanup doc only when noteId changes (handled above) or unmount
+    };
+  }, [noteId, enabled]);
 
-    // Get authentication token
+  // WebSocket provider: depends only on noteId, enabled, yDoc (stable deps; no initialContent/stateLoaded)
+  useEffect(() => {
+    if (!enabled || !yDoc) return;
+
     const token = getToken();
     if (!token) {
       setError(new Error('No authentication token found'));
       return;
     }
 
-    // Create WebSocket URL (without token - token goes in params)
     const wsUrl = `${YJS_WEBSOCKET_URL}/notes/${noteId}`;
-
-    // Create WebSocket provider with token in params
-    const wsProvider = new WebsocketProvider(wsUrl, `note-${noteId}`, doc, {
+    const wsProvider = new WebsocketProvider(wsUrl, `note-${noteId}`, yDoc, {
       connect: true,
       resyncInterval: 5000,
-      // Pass token as query parameter
-      params: {
-        token: token,
-      },
+      params: { token },
     });
 
-    // Handle connection events
     wsProvider.on('status', (event: { status: 'connecting' | 'connected' | 'disconnected' }) => {
       setConnected(event.status === 'connected');
-      if (event.status === 'connected') {
-        setError(null);
-      }
+      if (event.status === 'connected') setError(null);
     });
-
-    // Handle connection errors (signature: event, provider)
     wsProvider.on('connection-error', (event: unknown, _provider?: WebsocketProvider) => {
       const err = (event as { error?: Error })?.error;
       if (err) {
@@ -99,28 +114,23 @@ export function useYjsProvider({
         setError(err);
       }
     });
-
-    // Handle connection close
-    wsProvider.on('connection-close', () => {
-      setConnected(false);
-    });
+    wsProvider.on('connection-close', () => setConnected(false));
 
     setProvider(wsProvider);
-
-    // Cleanup on unmount
     return () => {
-      if (wsProvider) {
-        wsProvider.destroy();
-      }
+      wsProvider.destroy();
     };
-  }, [noteId, enabled, yDoc, initialContent, stateLoaded]);
+  }, [noteId, enabled, yDoc]);
 
-  // Load server state in background and apply when ready (doc already seeded with initialContent for instant display)
+  // Fetch /yjs-state once per noteId; apply only when doc is empty (do not overwrite WebSocket-synced state)
   useEffect(() => {
-    if (!yDoc || !enabled || stateLoadingRef.current) return;
+    if (!yDoc || !enabled || noteId <= 0) return;
+    if (docNoteIdRef.current !== noteId) return;
+    if (fetchedForNoteIdRef.current === noteId) return;
 
     const loadInitialState = async () => {
-      if (stateLoadingRef.current) return;
+      if (fetchedForNoteIdRef.current === noteId) return;
+      fetchedForNoteIdRef.current = noteId;
       stateLoadingRef.current = true;
 
       try {
@@ -135,24 +145,32 @@ export function useYjsProvider({
         if (response.ok) {
           const binaryState = await response.arrayBuffer();
           if (binaryState.byteLength > 0) {
-            Y.applyUpdate(yDoc, new Uint8Array(binaryState));
-            getTitleFromYjs(yDoc); // migrate legacy title if present
+            const blocks = yDoc.getArray('blocks');
+            if (blocks.length === 0) {
+              Y.applyUpdate(yDoc, new Uint8Array(binaryState));
+              getTitleFromYjs(yDoc);
+            }
           }
         } else if (response.status === 404) {
-          if (getTitleFromYjs(yDoc).length === 0 && initialTitle != null) {
-            setTitleInYjs(yDoc, initialTitle);
+          const title = getTitleFromYjs(yDoc);
+          if (title.length === 0 && initialTitleRef.current != null) {
+            setTitleInYjs(yDoc, initialTitleRef.current);
           }
         }
       } catch (err) {
         console.error('Failed to load Yjs state:', err);
-        if (getTitleFromYjs(yDoc).length === 0 && initialTitle != null) {
-          setTitleInYjs(yDoc, initialTitle);
+        fetchedForNoteIdRef.current = null;
+        const title = getTitleFromYjs(yDoc);
+        if (title.length === 0 && initialTitleRef.current != null) {
+          setTitleInYjs(yDoc, initialTitleRef.current);
         }
+      } finally {
+        stateLoadingRef.current = false;
       }
     };
 
     loadInitialState();
-  }, [noteId, yDoc, enabled, initialTitle]);
+  }, [noteId, yDoc, enabled]);
 
   return {
     yDoc,

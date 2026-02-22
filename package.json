@@ -27,6 +27,7 @@
     "next-intl": "^4.8.3",
     "pusher-js": "^8.4.0",
     "react": "19.2.3",
+    "react-day-picker": "^9.13.2",
     "react-dom": "19.2.3",
     "y-websocket": "^2.0.3",
     "yjs": "^13.6.10"

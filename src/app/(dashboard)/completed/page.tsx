@@ -1,7 +1,8 @@
 'use client';
 
-import { Calendar, CheckCircle2, Search } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import TaskItem from '@/components/TaskItem';
+import DatePickerPopover from '@/components/DatePickerPopover';
 import TaskDetailModal from '@/components/TaskDetailModal';
 import { tasks as tasksApi } from '@/lib/api';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -102,29 +103,13 @@ export default function CompletedPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="relative flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-                <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-40 bg-transparent text-sm outline-none"
-                />
-                {dateFilter && (
-                  <button
-                    type="button"
-                    onClick={() => setDateFilter('')}
-                    className="cursor-pointer ml-2 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {tDashboard('common.clear')}
-                  </button>
-                )}
-              </div>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                <Search className="h-3.5 w-3.5 text-muted-foreground/60" />
-              </div>
-            </div>
+            <DatePickerPopover
+              value={dateFilter}
+              onChange={setDateFilter}
+              onClear={() => setDateFilter('')}
+              placeholder={tDashboard('common.filterByDate') || 'Filter by date'}
+              inputStyle
+            />
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 'use client';
 
-import { Calendar, ChevronDown, Flag, MoreHorizontal, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, Flag, MoreHorizontal, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { projects as projectsApi, tasks as tasksApi, type Project } from '@/lib/api';
+import DatePickerPopover from '@/components/DatePickerPopover';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -30,7 +31,6 @@ export default function AddTaskModal({
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
-  const dateInputRef = useRef<HTMLInputElement>(null);
   const tCommon = useTranslations('dashboard.common');
   const { user } = useAuth();
   const mode = user?.mode ?? 'advanced';
@@ -45,9 +45,7 @@ export default function AddTaskModal({
   useEffect(() => {
     if (open) {
       setMounted(true);
-      if (mode !== 'basic') {
-        loadProjects();
-      }
+      loadProjects();
       // Reset form - default to no project (null) for quick add to inbox
       setTaskName('');
       setDescription('');
@@ -91,7 +89,9 @@ export default function AddTaskModal({
         selectedProjectId ?? null,
         taskName.trim(),
         dueDate || undefined,
-        priority
+        priority,
+        undefined,
+        description.trim() || null
       );
       onTaskAdded?.(res.data);
       onClose();
@@ -142,20 +142,20 @@ export default function AddTaskModal({
           onKeyDown={handleKeyDown}
         >
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
-            <h2 id="add-task-title" className="text-lg font-semibold text-foreground">{tCommon('addTask')}</h2>
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+            <h2 id="add-task-title" className="text-base font-semibold text-foreground">{tCommon('addTask')}</h2>
             <button
               type="button"
               onClick={onClose}
-              className="cursor-pointer rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="cursor-pointer rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               aria-label="Close dialog"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
             {/* Task Name */}
             <div>
               <label htmlFor="add-task-name" className="sr-only">
@@ -170,7 +170,7 @@ export default function AddTaskModal({
                 autoFocus
                 required
                 aria-required="true"
-                className="w-full border-0 bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-base font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
               />
             </div>
 
@@ -181,50 +181,35 @@ export default function AddTaskModal({
                 id="add-task-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Description"
+                placeholder="Add description..."
                 rows={3}
-                className="w-full resize-none border-0 bg-transparent text-sm text-muted-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
                 aria-label="Description"
               />
             </div>
 
             {/* Options Row */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {/* Date */}
-              <div className="relative">
-                <input
-                  ref={dateInputRef}
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="absolute opacity-0 pointer-events-none"
-                  aria-hidden="true"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    dateInputRef.current?.showPicker?.() || dateInputRef.current?.click();
-                  }}
-                  className="cursor-pointer flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  aria-label={dueDate ? `Due date: ${new Date(dueDate).toLocaleDateString()}` : 'Choose due date'}
-                >
-                  <Calendar className="h-4 w-4" aria-hidden="true" />
-                  <span>{dueDate ? new Date(dueDate).toLocaleDateString() : 'Date'}</span>
-                </button>
-              </div>
+              <DatePickerPopover
+                value={dueDate}
+                onChange={setDueDate}
+                placeholder="Date"
+                compact
+              />
 
               {/* Priority */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
-                  className="cursor-pointer flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
                   aria-expanded={showPriorityDropdown}
                   aria-haspopup="listbox"
                   aria-label={`Priority: ${priorityLabels[priority]}`}
                 >
                   <Flag
-                    className={`h-4 w-4 ${
+                    className={`h-3.5 w-3.5 shrink-0 ${
                       priority === 1
                         ? 'text-red-500'
                         : priority === 2
@@ -235,7 +220,7 @@ export default function AddTaskModal({
                     }`}
                   />
                   <span>{priorityLabels[priority]}</span>
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0" />
                 </button>
                 {showPriorityDropdown && (
                   <>
@@ -243,7 +228,7 @@ export default function AddTaskModal({
                       className="fixed inset-0 z-10"
                       onClick={() => setShowPriorityDropdown(false)}
                     />
-                    <div className="absolute left-0 top-full z-20 mt-1 w-40 rounded-lg border border-border bg-popover shadow-lg">
+                    <div className="absolute left-0 top-full z-20 mt-1 w-36 rounded-lg border border-border bg-popover shadow-lg">
                       <div className="p-1">
                         {[1, 2, 3, 4].map((p) => (
                           <button
@@ -253,7 +238,7 @@ export default function AddTaskModal({
                               setPriority(p);
                               setShowPriorityDropdown(false);
                             }}
-                            className={`cursor-pointer w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                            className={`cursor-pointer w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
                               priority === p
                                 ? 'bg-accent text-accent-foreground'
                                 : 'text-popover-foreground hover:bg-muted'
@@ -274,30 +259,30 @@ export default function AddTaskModal({
                   <button
                     type="button"
                     onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                    className="cursor-pointer flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
                     aria-expanded={showProjectDropdown}
                     aria-haspopup="listbox"
                   >
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
                       {selectedProject ? selectedProject.name.charAt(0).toUpperCase() : '·'}
                     </span>
-                    <span className="truncate max-w-[8rem]">
+                    <span className="truncate max-w-[7rem]">
                       {selectedProject ? selectedProject.name : 'No project'}
                     </span>
-                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                    <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                   {showProjectDropdown && (
-                    <div className="absolute z-10 mt-1 w-56 rounded-lg border border-border bg-popover shadow-lg">
-                      <div className="max-h-60 overflow-y-auto py-1">
+                    <div className="absolute z-10 mt-1 w-52 rounded-lg border border-border bg-popover shadow-lg">
+                      <div className="max-h-48 overflow-y-auto py-1">
                         <button
                           type="button"
                           onClick={() => {
                             setSelectedProjectId(null);
                             setShowProjectDropdown(false);
                           }}
-                          className="cursor-pointer flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
+                          className="cursor-pointer flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-muted rounded-md"
                         >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                          <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
                             ·
                           </span>
                           <span>No project</span>
@@ -310,7 +295,7 @@ export default function AddTaskModal({
                               setSelectedProjectId(project.id);
                               setShowProjectDropdown(false);
                             }}
-                            className="cursor-pointer flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
+                            className="cursor-pointer flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-muted rounded-md"
                           >
                             <span
                               className="inline-flex h-2 w-2 rounded-full"
@@ -325,126 +310,82 @@ export default function AddTaskModal({
                 </div>
               )}
 
-              {/* Reminders (placeholder) */}
-              <button
-                type="button"
-                className="cursor-pointer flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors opacity-50 cursor-not-allowed"
-                disabled
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span>Reminders</span>
-              </button>
-
-              {/* More options (placeholder) */}
-              <button
-                type="button"
-                className="cursor-pointer rounded-lg border border-border bg-background p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors opacity-50 cursor-not-allowed"
-                disabled
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
             </div>
 
-            {/* Project Selector */}
-            <div className="relative">
-              <label id="add-task-project-label" className="sr-only">Project</label>
-              <button
-                type="button"
-                onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                className="cursor-pointer flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                aria-labelledby="add-task-project-label"
-                aria-expanded={showProjectDropdown}
-                aria-haspopup="listbox"
-              >
-                <div className="flex items-center gap-2">
-                  {selectedProject ? (
-                    <>
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{
-                          backgroundColor: selectedProject.color || '#94a3b8',
-                        }}
-                      />
-                      <span>#{selectedProject.name}</span>
-                    </>
-                  ) : (
-                    <span>No project</span>
-                  )}
-                </div>
-                <ChevronDown className="h-4 w-4" />
-              </button>
-              {showProjectDropdown && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowProjectDropdown(false)}
-                  />
-                  <div className="absolute left-0 top-full z-20 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg">
-                    <div className="p-1 max-h-60 overflow-y-auto">
-                      {/* No project option */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedProjectId(null);
-                          setShowProjectDropdown(false);
-                        }}
-                        className={`cursor-pointer flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                          selectedProjectId === null
-                            ? 'bg-accent text-accent-foreground'
-                            : 'text-popover-foreground hover:bg-muted'
-                        }`}
-                      >
-                        <span className="truncate">No project</span>
-                      </button>
-                      {projects.map((project) => (
+            {/* Project (basic mode: single row; advanced has it in options above) */}
+            {mode === 'basic' && (
+              <div className="relative">
+                <label id="add-task-project-label" className="sr-only">Project</label>
+                <button
+                  type="button"
+                  onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+                  className="cursor-pointer flex w-full items-center justify-between rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
+                  aria-labelledby="add-task-project-label"
+                  aria-expanded={showProjectDropdown}
+                  aria-haspopup="listbox"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {selectedProject ? (
+                      <>
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: selectedProject.color || '#94a3b8' }}
+                        />
+                        <span className="truncate">#{selectedProject.name}</span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">No project</span>
+                    )}
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                </button>
+                {showProjectDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowProjectDropdown(false)} />
+                    <div className="absolute left-0 top-full z-20 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg">
+                      <div className="p-1 max-h-48 overflow-y-auto">
                         <button
-                          key={project.id}
                           type="button"
-                          onClick={() => {
-                            setSelectedProjectId(project.id);
-                            setShowProjectDropdown(false);
-                          }}
-                          className={`cursor-pointer flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                            selectedProjectId === project.id
-                              ? 'bg-accent text-accent-foreground'
-                              : 'text-popover-foreground hover:bg-muted'
+                          onClick={() => { setSelectedProjectId(null); setShowProjectDropdown(false); }}
+                          className={`cursor-pointer flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
+                            selectedProjectId === null ? 'bg-accent text-accent-foreground' : 'text-popover-foreground hover:bg-muted'
                           }`}
                         >
-                          <span
-                            className="h-2 w-2 rounded-full shrink-0"
-                            style={{
-                              backgroundColor: project.color || '#94a3b8',
-                            }}
-                          />
-                          <span className="truncate">{project.name}</span>
+                          No project
                         </button>
-                      ))}
+                        {projects.map((project) => (
+                          <button
+                            key={project.id}
+                            type="button"
+                            onClick={() => { setSelectedProjectId(project.id); setShowProjectDropdown(false); }}
+                            className={`cursor-pointer flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
+                              selectedProjectId === project.id ? 'bg-accent text-accent-foreground' : 'text-popover-foreground hover:bg-muted'
+                            }`}
+                          >
+                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: project.color || '#94a3b8' }} />
+                            <span className="truncate">{project.name}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
               <button
                 type="button"
                 onClick={onClose}
-                className="cursor-pointer rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                className="cursor-pointer rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || !taskName.trim()}
-                className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? tCommon('adding') : tCommon('addTask')}
               </button>

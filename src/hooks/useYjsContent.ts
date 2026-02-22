@@ -67,7 +67,8 @@ export function useYjsContent(
   const [otherViewers, setOtherViewers] = useState<NoteViewer[]>([]);
   const yDocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
-  const initializedRef = useRef(false);
+  const userRef = useRef(user);
+  userRef.current = user;
 
   useEffect(() => {
     if (!enabled || noteId <= 0) {
@@ -84,12 +85,10 @@ export function useYjsContent(
 
     // Cleanup previous connection if it exists
     const prevProvider = providerRef.current;
-    
     if (prevProvider) {
       prevProvider.destroy();
       providerRef.current = null;
     }
-    // Clear yDoc ref - new one will be created
     yDocRef.current = null;
 
     const initializeYjs = async () => {
@@ -103,7 +102,6 @@ export function useYjsContent(
           return;
         }
 
-        // Create Yjs document and connect immediately so presence appears fast
         const yDoc = new Y.Doc();
         yDocRef.current = yDoc;
 
@@ -116,11 +114,12 @@ export function useYjsContent(
         providerRef.current = provider;
 
         const setOurPresence = () => {
-          if (provider.awareness && user) {
+          const u = userRef.current;
+          if (provider.awareness && u) {
             provider.awareness.setLocalStateField('noteId', noteId);
-            provider.awareness.setLocalStateField('userId', user.id);
-            provider.awareness.setLocalStateField('userName', user.name || user.email || 'User');
-            provider.awareness.setLocalStateField('userAvatar', user.avatar_url ?? null);
+            provider.awareness.setLocalStateField('userId', u.id);
+            provider.awareness.setLocalStateField('userName', u.name || u.email || 'User');
+            provider.awareness.setLocalStateField('userAvatar', u.avatar_url ?? null);
           }
         };
         setOurPresence();
@@ -174,13 +173,13 @@ export function useYjsContent(
             }
           });
 
-          // Include current user so everyone viewing (including you) is shown
-          if (user && !viewersByUser.has(user.id)) {
-            viewersByUser.set(user.id, {
+          const u = userRef.current;
+          if (u && !viewersByUser.has(u.id)) {
+            viewersByUser.set(u.id, {
               clientId: provider.awareness.clientID,
-              userId: user.id,
-              userName: user.name || user.email || 'User',
-              avatarUrl: user.avatar_url ?? undefined,
+              userId: u.id,
+              userName: u.name || u.email || 'User',
+              avatarUrl: u.avatar_url ?? undefined,
             });
           }
 
@@ -210,7 +209,7 @@ export function useYjsContent(
           setLoading(false);
         }
 
-        // Load initial state in background and apply when ready
+        // Load initial state once; apply only when doc is empty (do not overwrite WebSocket-synced state)
         const response = await fetch(`${API_URL}/notes/${noteId}/yjs-state`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -218,8 +217,11 @@ export function useYjsContent(
           if (response.ok) {
             const binaryState = await response.arrayBuffer();
             if (binaryState.byteLength > 0) {
-              Y.applyUpdate(yDocRef.current, new Uint8Array(binaryState));
-              getTitleFromYjs(yDocRef.current); // migrate legacy title if present
+              const blocks = yDocRef.current.getArray('blocks');
+              if (blocks.length === 0) {
+                Y.applyUpdate(yDocRef.current, new Uint8Array(binaryState));
+                getTitleFromYjs(yDocRef.current);
+              }
             }
           }
           const initialContent = yjsToNoteContent(yDocRef.current);
@@ -254,7 +256,7 @@ export function useYjsContent(
         yDocRef.current = null;
       }
     };
-  }, [noteId, fallbackContent, user?.id, user?.name, user?.email, user?.avatar_url, enabled]);
+  }, [noteId, fallbackContent, enabled]);
 
   return { 
     content: normalizeContentForView(content), 
